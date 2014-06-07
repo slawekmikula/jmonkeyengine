@@ -153,7 +153,7 @@ public final class SceneViewerTopComponent extends TopComponent {
 
         jToolBar1 = new javax.swing.JToolBar();
         enableCamLight = new javax.swing.JToggleButton();
-        jToggleButton1 = new javax.swing.JToggleButton();
+        enablePostFilterEffects = new javax.swing.JToggleButton();
         jSeparator1 = new javax.swing.JToolBar.Separator();
         enableWireframe = new javax.swing.JToggleButton();
         jPanel1 = new javax.swing.JPanel();
@@ -178,18 +178,18 @@ public final class SceneViewerTopComponent extends TopComponent {
         });
         jToolBar1.add(enableCamLight);
 
-        jToggleButton1.setIcon(IconList.eyeOpen);
-        org.openide.awt.Mnemonics.setLocalizedText(jToggleButton1, org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.jToggleButton1.text")); // NOI18N
-        jToggleButton1.setToolTipText(org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.jToggleButton1.toolTipText")); // NOI18N
-        jToggleButton1.setFocusable(false);
-        jToggleButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        jToggleButton1.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        jToggleButton1.addActionListener(new java.awt.event.ActionListener() {
+        enablePostFilterEffects.setIcon(IconList.eyeOpen);
+        org.openide.awt.Mnemonics.setLocalizedText(enablePostFilterEffects, org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.enablePostFilterEffects.text")); // NOI18N
+        enablePostFilterEffects.setToolTipText(org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.enablePostFilterEffects.toolTipText")); // NOI18N
+        enablePostFilterEffects.setFocusable(false);
+        enablePostFilterEffects.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        enablePostFilterEffects.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        enablePostFilterEffects.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jToggleButton1ActionPerformed(evt);
+                enablePostFilterEffectsActionPerformed(evt);
             }
         });
-        jToolBar1.add(jToggleButton1);
+        jToolBar1.add(enablePostFilterEffects);
         jToolBar1.add(jSeparator1);
 
         enableWireframe.setIcon(IconList.colorBox);
@@ -239,16 +239,16 @@ public final class SceneViewerTopComponent extends TopComponent {
         app.enableStats(enableStats.isSelected());
     }//GEN-LAST:event_enableStatsActionPerformed
 
-    private void jToggleButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jToggleButton1ActionPerformed
-        FilterExplorerTopComponent.findInstance().setFilterEnabled(jToggleButton1.isSelected());
-    }//GEN-LAST:event_jToggleButton1ActionPerformed
+    private void enablePostFilterEffectsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_enablePostFilterEffectsActionPerformed
+        FilterExplorerTopComponent.findInstance().setFilterEnabled(enablePostFilterEffects.isSelected());
+    }//GEN-LAST:event_enablePostFilterEffectsActionPerformed
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JToggleButton enableCamLight;
+    private javax.swing.JToggleButton enablePostFilterEffects;
     private javax.swing.JToggleButton enableStats;
     private javax.swing.JToggleButton enableWireframe;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JToolBar.Separator jSeparator1;
-    private javax.swing.JToggleButton jToggleButton1;
     private javax.swing.JToolBar jToolBar1;
     private javax.swing.JPanel oGLPanel;
     // End of variables declaration//GEN-END:variables
@@ -293,8 +293,6 @@ public final class SceneViewerTopComponent extends TopComponent {
 
     @Override
     public HelpCtx getHelpCtx() {
-        //this call is for single components:
-        //HelpCtx.setHelpIDString(this, "com.jme3.gde.core.sceneviewer");
         return helpContext;
     }
 
@@ -308,8 +306,8 @@ public final class SceneViewerTopComponent extends TopComponent {
     }
 
     @Override
-    protected void componentShowing() {
-        super.componentShowing();
+    protected void componentShowing() {                
+        super.componentShowing();        
     }
 
     @Override
@@ -320,10 +318,10 @@ public final class SceneViewerTopComponent extends TopComponent {
     @Override
     public void componentClosed() {
         super.componentClosed();
-//        oglCanvas.setActiveUpdates(false);
         SceneRequest req = SceneApplication.getApplication().getCurrentSceneRequest();
         if (req != null) {
             enableCamLight.setSelected(false);
+            enablePostFilterEffects.setSelected(false);
             enableStats.setSelected(false);
             SceneApplication.getApplication().closeScene(req);
         }
@@ -358,4 +356,15 @@ public final class SceneViewerTopComponent extends TopComponent {
     public UndoRedo getUndoRedo() {
         return Lookup.getDefault().lookup(UndoRedo.class);
     }
+
+    /**
+      * refresh application decoration regarding button states
+      */
+    public void refreshWindowDisplay() {
+        enableCamLightActionPerformed(null);
+        enablePostFilterEffectsActionPerformed(null);
+        enableWireframeActionPerformed(null);
+        enableStatsActionPerformed(null);
+    }
+    
 }

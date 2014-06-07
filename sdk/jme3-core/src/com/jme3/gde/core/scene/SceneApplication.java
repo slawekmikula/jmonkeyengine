@@ -444,6 +444,7 @@ public class SceneApplication extends Application implements LookupProvider {
                         return null;
                     }
                 });
+                refreshWindowDisplay();
                 notifyOpen(request);
             }
         });
@@ -532,13 +533,12 @@ public class SceneApplication extends Application implements LookupProvider {
         }
     }
 
-    private void resetCam() {
-        cam.setLocation(new Vector3f(0, 0, 10));
-        cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
-    }
-
     private void setWindowTitle(final String string) {
         SceneViewerTopComponent.findInstance().setDisplayName(string);
+    }
+    
+    private void refreshWindowDisplay() {
+        SceneViewerTopComponent.findInstance().refreshWindowDisplay();
     }
 
     private void setCurrentFileNode(final org.openide.nodes.Node node) {
