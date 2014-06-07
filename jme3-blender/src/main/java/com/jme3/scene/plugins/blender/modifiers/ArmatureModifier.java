@@ -136,6 +136,7 @@ import com.jme3.util.BufferUtils;
      *             file
      */
     private void buildBones(Long armatureObjectOMA, Structure boneStructure, Bone parent, List<Bone> result, Long spatialOMA, BlenderContext blenderContext) throws BlenderFileException {
+        LOGGER.log(Level.INFO, "Building bones");
         BoneContext bc = new BoneContext(armatureObjectOMA, boneStructure, blenderContext);
         bc.buildBone(result, spatialOMA, blenderContext);
     }

@@ -2,6 +2,8 @@ package com.jme3.scene.plugins.blender.animations;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.jme3.animation.Bone;
 import com.jme3.animation.Skeleton;
@@ -22,6 +24,9 @@ import com.jme3.scene.plugins.blender.objects.ObjectHelper;
  * @author Marcin Roguski (Kaelthas)
  */
 public class BoneContext {
+    
+    private static final Logger        LOGGER  = Logger.getLogger(BoneContext.class.getName());
+    
     // the flags of the bone
     public static final int      CONNECTED_TO_PARENT                 = 0x0010;
     public static final int      DEFORM                              = 0x1000;
@@ -163,6 +168,9 @@ public class BoneContext {
         Quaternion rotation = boneLocalMatrix.toRotationQuat().normalizeLocal();
         Vector3f scale = boneLocalMatrix.toScaleVector();
 
+        LOGGER.log(Level.INFO, "Bone: {0} with location: {1} | rotation: {2} | scale: {3}.", 
+                new Object[] { bone.getName(), poseLocation.toString(), rotation.toString(), scale.toString() });
+        
         bone.setBindTransforms(poseLocation, rotation, scale);
         for (BoneContext child : children) {
             bone.addChild(child.buildBone(bones, skeletonOwnerOma, blenderContext));
