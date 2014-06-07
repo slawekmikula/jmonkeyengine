@@ -53,6 +53,7 @@ public class TestNativeLoader {
     
     private static void tryLoadJinput() {
         NativeLibraryLoader.loadNativeLibrary("jinput", true);
+        NativeLibraryLoader.loadNativeLibrary("jinput-dx8", true);
         
         net.java.games.input.ControllerEnvironment ce =
             net.java.games.input.ControllerEnvironment.getDefaultEnvironment();
@@ -105,7 +106,6 @@ public class TestNativeLoader {
             NativeLibraryLoader.loadNativeLibrary("bulletjme", true);
 
             com.jme3.bullet.PhysicsSpace physSpace = new com.jme3.bullet.PhysicsSpace();
-            com.jme3.bullet.PhysicsSpace.initNativePhysics();
 
             System.out.println("Succeeded in loading BulletJme.");
         } else {
