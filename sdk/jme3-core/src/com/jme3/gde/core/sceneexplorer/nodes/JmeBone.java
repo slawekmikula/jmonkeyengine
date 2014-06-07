@@ -34,6 +34,8 @@ package com.jme3.gde.core.sceneexplorer.nodes;
 import com.jme3.animation.Bone;
 import com.jme3.gde.core.icons.IconList;
 import com.jme3.gde.core.scene.SceneApplication;
+import com.jme3.math.Quaternion;
+import com.jme3.math.Vector3f;
 import java.awt.Image;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.event.ActionEvent;
@@ -91,6 +93,22 @@ public class JmeBone extends AbstractSceneExplorerNode {
         if (obj == null) {
             return sheet;
         }
+        
+        set.put(makeProperty(obj, String.class, "getName", "Bone Name"));
+        set.put(makeProperty(obj, Bone.class, "getParent", "Parent Bone"));
+        
+        set.put(makeProperty(obj, Vector3f.class, "getLocalPosition", "Local Position"));
+        set.put(makeProperty(obj, Quaternion.class, "getLocalRotation", "Local Rotation"));
+        set.put(makeProperty(obj, Vector3f.class, "getLocalScale", "Local Scale"));
+        
+        set.put(makeProperty(obj, Vector3f.class, "getModelSpacePosition", "Model Space Position"));
+        set.put(makeProperty(obj, Quaternion.class, "getModelSpaceRotation", "Model Space Rotation"));
+        set.put(makeProperty(obj, Vector3f.class, "getModelSpaceScale", "Model Space Scale"));
+        
+        set.put(makeProperty(obj, Vector3f.class, "getWorldBindPosition", "World Bind Position"));
+        set.put(makeProperty(obj, Quaternion.class, "getWorldBindRotation", "World Bind Rotation"));
+        set.put(makeProperty(obj, Vector3f.class, "getWorldBindScale", "World Bind Scale"));
+        
         sheet.put(set);
         return sheet;
 
