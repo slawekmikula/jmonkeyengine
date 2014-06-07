@@ -73,7 +73,7 @@ public class Vector2fPropertyEditor implements PropertyEditor {
     }
 
     public String getAsText() {
-        return "[" + vector.x + ", " + vector.y + "]";
+        return String.format("[%.2f, %.2f]", vector.x, vector.y);
     }
     
     private void parseInto(String text, Vector2f res) throws IllegalArgumentException {

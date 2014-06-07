@@ -73,7 +73,7 @@ public class Vector3fPropertyEditor implements PropertyEditor {
     }
 
     public String getAsText() {
-        return "[" + vector.x + ", " + vector.y + ", " + vector.z + "]";
+        return String.format("[%.2f, %.2f, %.2f]", vector.x, vector.y, vector.z);
     }
     
     private void parseInto(String text, Vector3f res) throws IllegalArgumentException {

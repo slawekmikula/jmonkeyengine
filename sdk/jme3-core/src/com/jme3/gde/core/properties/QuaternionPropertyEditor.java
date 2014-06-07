@@ -74,7 +74,7 @@ public class QuaternionPropertyEditor implements PropertyEditor {
 
     public String getAsText() {
         float[] angles = quaternion.toAngles(new float[3]);
-        return "[" + (float) Math.toDegrees(angles[0]) + ", " + (float) Math.toDegrees(angles[1]) + ", " + (float) Math.toDegrees(angles[2]) + "]";
+        return String.format("[%.2f, %.2f, %.2f]", (float) Math.toDegrees(angles[0]), (float) Math.toDegrees(angles[1]), (float) Math.toDegrees(angles[2]));
     }
 
     private void parseInto(String text, Quaternion res) throws IllegalArgumentException {
