@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.jme3.gde.core.scene.controller;
 
 import com.jme3.app.Application;
@@ -27,7 +23,6 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import com.jme3.scene.control.CameraControl;
 import com.jme3.scene.debug.Arrow;
 import com.jme3.scene.debug.Grid;
 import com.jme3.scene.debug.WireBox;
@@ -36,6 +31,7 @@ import java.util.concurrent.Callable;
 /**
  * This class can be used or extended by other plugins to display
  * standard tools in the tools scene e.g. a cursor etc.
+ * 
  * @author normenhansen
  */
 public class SceneToolController implements AppState {
@@ -71,15 +67,10 @@ public class SceneToolController implements AppState {
     protected void initTools() {
 
         blueMat = createBlueMat();
-        //Material redMat = new Material(manager, "Common/MatDefs/Misc/Unshaded.j3md");
-        //redMat.getAdditionalRenderState().setWireframe(true);
-        //redMat.setColor("Color", ColorRGBA.Red);
+        
         Material greenMat = new Material(manager, "Common/MatDefs/Misc/Unshaded.j3md");
         greenMat.getAdditionalRenderState().setWireframe(true);
         greenMat.setColor("Color", ColorRGBA.Green);
-        //Material blueMat = new Material(manager, "Common/MatDefs/Misc/Unshaded.j3md");
-        //blueMat.getAdditionalRenderState().setWireframe(true);
-        //blueMat.setColor("Color", ColorRGBA.Blue);
         Material grayMat = new Material(manager, "Common/MatDefs/Misc/Unshaded.j3md");
         grayMat.getAdditionalRenderState().setWireframe(true);
         grayMat.setColor("Color", ColorRGBA.Gray);
@@ -89,25 +80,19 @@ public class SceneToolController implements AppState {
             cursor = new Node();
         }
         cursor.detachAllChildren();
-        //Geometry cursorArrowX = new Geometry("cursorArrowX", new Arrow(Vector3f.UNIT_X));
         Geometry cursorArrowY = new Geometry("cursorArrowY", new Arrow(new Vector3f(0, -1, 0)));
         cursorArrowY.setLocalTranslation(0, 1, 0);
-        //Geometry cursorArrowZ = new Geometry("cursorArrowZ", new Arrow(Vector3f.UNIT_Z));
-        //cursorArrowX.setMaterial(redMat);
         cursorArrowY.setMaterial(greenMat);
-        //cursorArrowZ.setMaterial(blueMat);
-        //cursor.attachChild(cursorArrowX);
         cursor.attachChild(cursorArrowY);
-        //cursor.attachChild(cursorArrowZ);
 
         //grid
         grid = new Geometry("grid", new Grid(20, 20, 1.0f));
         grid.setMaterial(grayMat);
         grid.setLocalTranslation(-10, 0, -10);
+        
         final Spatial cursor = this.cursor;
         final Node toolsNode = this.toolsNode;
         SceneApplication.getApplication().enqueue(new Callable<Object>() {
-
             public Object call() throws Exception {
                 toolsNode.attachChild(cursor);
                 return null;
@@ -200,7 +185,6 @@ public class SceneToolController implements AppState {
         }
         if (spat instanceof ParticleEmitter) {
             attachBoxSelection(spat);
-
         } else if (spat instanceof Geometry) {
             attachGeometrySelection((Geometry) spat);
         } else if (spat.getControl(PhysicsControl.class) != null) {
@@ -210,21 +194,6 @@ public class SceneToolController implements AppState {
         }
     }
 
-//    protected void attachParticleEmitterSelection(ParticleEmitter pe) {
-//        Mesh mesh = pe.getMesh();
-//        if (mesh == null) {
-//            return;
-//        }
-//        Material mat = new Material(SceneApplication.getApplication().getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
-//        mat.getAdditionalRenderState().setWireframe(true);
-//        mat.setColor("Color", ColorRGBA.Blue);
-//        pe.getWorldBound().
-//        Geometry selectionGeometry = new Geometry("selection_geometry_sceneviewer", mesh);
-//        selectionGeometry.setMaterial(mat);
-//        selectionGeometry.setLocalTransform(pe.getWorldTransform());
-//        toolsNode.attachChild(selectionGeometry);
-//        selectionShape = selectionGeometry;
-//    }
     protected void attachGeometrySelection(Geometry geom) {
         Mesh mesh = geom.getMesh();
         if (mesh == null) {
@@ -254,15 +223,8 @@ public class SceneToolController implements AppState {
             final Geometry selectionGeometry = new Geometry("selection_geometry_sceneviewer", wireBox);
             selectionGeometry.setMaterial(blueMat);
             selectionGeometry.setLocalTranslation(bbox.getCenter().subtract(geom.getWorldTranslation()));
-            //Vector3f scale = new Vector3f(1,1,1);
-            //scale.x = 1/geom.getWorldScale().x;
-            //scale.y = 1/geom.getWorldScale().y;
-            //scale.z = 1/geom.getWorldScale().z;
             selectionShape = new Node("SelectionParent");
             ((Node) selectionShape).attachChild(selectionGeometry);
-            //selectionShape.setLocalTransform(geom.getWorldTransform());
-            //selectionShape.setLocalTranslation(geom.getWorldTranslation());
-            //selectionGeometry.setLocalScale(scale);
 
             SceneApplication.getApplication().enqueue(new Callable<Object>() {
 
@@ -391,29 +353,23 @@ public class SceneToolController implements AppState {
     }
 
     public void initialize(AppStateManager asm, Application aplctn) {
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public boolean isInitialized() {
         return true;
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setEnabled(boolean bln) {
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public boolean isEnabled() {
         return true;
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void stateAttached(AppStateManager asm) {
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void stateDetached(AppStateManager asm) {
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void update(float f) {
@@ -423,16 +379,12 @@ public class SceneToolController implements AppState {
 
         selectionShape.setLocalTranslation(selected.getWorldTranslation());
         selectionShape.setLocalRotation(selected.getWorldRotation());
-        //selectionShape.setLocalScale(selected.getWorldScale());
-
     }
 
     public void render(RenderManager rm) {
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void postRender() {
-//        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public Spatial getSelectedSpatial() {

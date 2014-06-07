@@ -259,26 +259,14 @@ public final class SceneExplorerTopComponent extends TopComponent implements Exp
         try {
             if (node != null) {
                 explorerManager.setSelectedNodes(new Node[]{node});
-//                setActivatedNodes(new Node[]{node});
             } else {
                 explorerManager.setSelectedNodes(new Node[]{});
-//                setActivatedNodes(new Node[]{});
             }
         } catch (Exception ex) {
             Exceptions.printStackTrace(ex);
         }
     }
 
-//    public void resultChanged(LookupEvent ev) {
-//        Collection collection = nodeSelectionResult.allInstances();
-//        for (Iterator it = collection.iterator(); it.hasNext();) {
-//            Object object = it.next();
-//            if (object instanceof AbstractSceneExplorerNode) {
-//                return;
-//            }
-//        }
-//        selectedSpatial = null;
-//    }
     public void sceneOpened(SceneRequest request) {
         final JmeNode node = request.getJmeNode();
         for (Iterator it = materialChangeProviders.values().iterator(); it.hasNext();) {
