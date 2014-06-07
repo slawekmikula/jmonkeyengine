@@ -206,7 +206,7 @@ import com.jme3.util.BufferUtils;
         Buffer indexes = mesh.getBuffer(Type.Index).getData();
         FloatBuffer positions = mesh.getFloatBuffer(Type.Position);
 
-        int maximumWeightsPerVertex = 0;
+        int maximumWeightsPerVertex = 1;
         if (useVertexGroups) {
             LOGGER.fine("Attaching verts to bones using vertex groups.");
             for (int boneIndex = 1; boneIndex < skeleton.getBoneCount(); ++boneIndex) {// bone with index 0 is a root bone
