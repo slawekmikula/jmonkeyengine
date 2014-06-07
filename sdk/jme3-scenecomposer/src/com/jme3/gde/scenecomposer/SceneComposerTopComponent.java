@@ -864,6 +864,7 @@ private void jToggleSelectGeomActionPerformed(java.awt.event.ActionEvent evt) {/
             sceneInfoLabel2.setToolTipText("");
             close();
         } else {
+            result.addLookupListener(this);
             showSelectionToggleButton.setSelected(true);
             showGridToggleButton.setSelected(false);
             //TODO: threading
@@ -880,8 +881,7 @@ private void jToggleSelectGeomActionPerformed(java.awt.event.ActionEvent evt) {/
 
     public void openScene(Spatial spat, AssetDataObject file, ProjectAssetManager manager) {
         cleanupControllers();
-        SceneApplication.getApplication().addSceneListener(this);
-        result.addLookupListener(this);
+        SceneApplication.getApplication().addSceneListener(this);        
         Node node;
         if (spat instanceof Node) {
             node = (Node) spat;
@@ -1070,7 +1070,6 @@ private void jToggleSelectGeomActionPerformed(java.awt.event.ActionEvent evt) {/
                     new Thread(call).start();
                 }
             };
-//            currentRequest.getManager().addClassPathEventListener(listener);
         }
     }
 
@@ -1078,7 +1077,6 @@ private void jToggleSelectGeomActionPerformed(java.awt.event.ActionEvent evt) {/
         if (request.equals(currentRequest)) {
             setActivatedNodes(new org.openide.nodes.Node[]{});
             if (listener != null && request.getManager() != null) {
-//                request.getManager().removeClassPathEventListener(listener);
                 listener = null;
             }
             SceneApplication.getApplication().removeSceneListener(this);
