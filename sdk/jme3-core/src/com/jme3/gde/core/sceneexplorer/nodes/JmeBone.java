@@ -112,6 +112,7 @@ public class JmeBone extends AbstractSceneExplorerNode {
 
                     public Void call() throws Exception {
                         jmeSkeletonControl.getSkeletonControl().getAttachmentsNode(bone.getName());
+                        bone.updateWorldVectors();
                         return null;
                     }
                 }).get();
