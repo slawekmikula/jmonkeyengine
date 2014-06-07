@@ -384,12 +384,10 @@ public class SkeletonControl extends AbstractControl implements Cloneable {
     }
 
     public Control cloneForSpatial(Spatial spatial) {
-        Node clonedNode = (Node) spatial;
-        AnimControl ctrl = spatial.getControl(AnimControl.class);
+        Node clonedNode = (Node) spatial;                
         SkeletonControl clone = new SkeletonControl();
-
-        clone.skeleton = ctrl.getSkeleton();
-
+        
+        clone.skeleton = skeleton;
         clone.setSpatial(clonedNode);
 
         // Fix attachments for the cloned node
@@ -399,10 +397,9 @@ public class SkeletonControl extends AbstractControl implements Cloneable {
             if (child instanceof Node) {
                 Node clonedAttachNode = (Node) child;
                 Bone originalBone = (Bone) clonedAttachNode.getUserData("AttachedBone");
-
-                if (originalBone != null) {
-                    Bone clonedBone = clone.skeleton.getBone(originalBone.getName());
-
+                
+                if (originalBone != null) {                    
+                    Bone clonedBone = clone.skeleton.getBone(originalBone.getName());                    
                     clonedAttachNode.setUserData("AttachedBone", clonedBone);
                     clonedBone.setAttachmentsNode(clonedAttachNode);
                 }
