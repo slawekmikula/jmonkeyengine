@@ -66,9 +66,9 @@ persistenceType = TopComponent.PERSISTENCE_ALWAYS)
     displayName = "#CTL_AppStateExplorerAction",
 preferredID = "AppStateExplorerTopComponent")
 @Messages({
-    "CTL_AppStateExplorerAction=AppStateExplorer",
-    "CTL_AppStateExplorerTopComponent=AppStateExplorer Window",
-    "HINT_AppStateExplorerTopComponent=This is a AppStateExplorer window"
+    "CTL_AppStateExplorerAction=Application State Explorer",
+    "CTL_AppStateExplorerTopComponent=App State Explorer",
+    "HINT_AppStateExplorerTopComponent=This is a Application State Explorer window"
 })
 public final class AppStateExplorerTopComponent extends TopComponent implements ExplorerManager.Provider {
 

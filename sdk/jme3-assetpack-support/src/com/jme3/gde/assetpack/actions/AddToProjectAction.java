@@ -64,7 +64,7 @@ public final class AddToProjectAction implements Action {
                     } else {
                         Message msg = new NotifyDescriptor.Message(
                                 "Please open a model from the destination\n"
-                                + "project in the SceneExplorer\n"
+                                + "project in the Scene Explorer\n"
                                 + "to define the project.\n"
                                 + "(temp. workaround)",
                                 NotifyDescriptor.ERROR_MESSAGE);
