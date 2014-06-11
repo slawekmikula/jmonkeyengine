@@ -31,11 +31,15 @@
  */
 package com.jme3.gde.core.sceneexplorer.nodes.actions.impl;
 
+import com.jme3.asset.AssetManager;
 import com.jme3.gde.core.sceneexplorer.nodes.actions.AbstractNewSpatialAction;
 import com.jme3.gde.core.sceneexplorer.nodes.actions.NewGeometryAction;
+import com.jme3.material.Material;
+import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
+import com.jme3.scene.shape.Sphere;
 
 /**
  *
@@ -50,7 +54,20 @@ public class NewGeometrySphereAction extends AbstractNewSpatialAction implements
 
     @Override
     protected Spatial doCreateSpatial(Node parent) {
-        Geometry geom = NewGeometry.sphere(pm);
+        NewGeometrySettings cfg = new NewGeometrySettings();
+        Sphere b = new Sphere(
+            cfg.getSphereZSamples()
+            , cfg.getSpherRadialSamples()
+            , cfg.getSphereRadius()
+            , cfg.getSphereUseEvenSlices()
+            , cfg.getSphereInterior()
+        );
+        b.setMode(cfg.getSphereMode());
+        Geometry geom = new Geometry(cfg.getSphereName(), b);
+        Material mat = new Material(pm, "Common/MatDefs/Misc/Unshaded.j3md");
+        ColorRGBA  c = cfg.getMatRandom() ?ColorRGBA.randomColor() : cfg.getMatColor();
+        mat.setColor("Color", c);
+        geom.setMaterial(mat);        
         parent.attachChild(geom);
         return geom;
     }
