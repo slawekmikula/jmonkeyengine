@@ -881,7 +881,7 @@ private void jToggleSelectGeomActionPerformed(java.awt.event.ActionEvent evt) {/
 
     public void openScene(Spatial spat, AssetDataObject file, ProjectAssetManager manager) {
         cleanupControllers();
-        SceneApplication.getApplication().addSceneListener(this);        
+        SceneApplication.getApplication().addSceneListener(this);
         Node node;
         if (spat instanceof Node) {
             node = (Node) spat;
