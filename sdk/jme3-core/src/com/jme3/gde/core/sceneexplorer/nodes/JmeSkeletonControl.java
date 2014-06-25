@@ -34,13 +34,19 @@ package com.jme3.gde.core.sceneexplorer.nodes;
 import com.jme3.animation.SkeletonControl;
 import com.jme3.gde.core.icons.IconList;
 import com.jme3.gde.core.scene.SceneApplication;
+import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Spatial;
+import com.jme3.scene.debug.SkeletonDebugger;
 import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import javax.swing.Action;
 import org.openide.actions.DeleteAction;
+import org.openide.awt.Actions;
 import org.openide.loaders.DataObject;
 import org.openide.nodes.Node;
 import org.openide.nodes.Sheet;
@@ -99,14 +105,49 @@ public class JmeSkeletonControl extends AbstractSceneExplorerNode {
 
     @Override
     public Action[] getActions(boolean context) {
-        return new SystemAction[]{
-                    //                    SystemAction.get(CopyAction.class),
-                    //                    SystemAction.get(CutAction.class),
-                    //                    SystemAction.get(PasteAction.class),
-                    SystemAction.get(DeleteAction.class)
+        return new Action[]{
+                    Actions.alwaysEnabled(new ShowSkeletonActionListener(), "Show skeleton", "", false),
+                    SystemAction.get(DeleteAction.class)                    
                 };
     }
 
+    private class ShowSkeletonActionListener implements ActionListener {
+
+        public void actionPerformed(ActionEvent e) {
+            fireSave(true);
+            try {
+                SceneApplication.getApplication().enqueue(new Callable<Void>() {
+
+                    public Void call() throws Exception {
+                        
+                        HashMap<Integer, Float> map = new HashMap<Integer, Float>();
+                        for (int i = 0; i < skeletonControl.getSkeleton().getBoneCount(); i++) {
+                            map.put(i, 0.5f); // FIXME
+                        }
+
+                        final SkeletonDebugger skeletonDebug =
+                                new SkeletonDebugger("skeleton", skeletonControl.getSkeleton(), map);
+                        final Material mat = new Material(assetManager,
+                                "Common/MatDefs/Misc/Unshaded.j3md");
+                        mat.setColor("Color", ColorRGBA.Green);
+                        mat.getAdditionalRenderState().setDepthTest(false);
+                        skeletonDebug.setMaterial(mat);
+                        supportNode.attachChild(skeletonDebug);
+                        
+                        
+                        return null;
+                    }
+                }).get();
+                ((AbstractSceneExplorerNode) getParentNode()).refresh(false);
+            } catch (InterruptedException ex) {
+                Exceptions.printStackTrace(ex);
+            } catch (ExecutionException ex) {
+                Exceptions.printStackTrace(ex);
+            }
+
+        }
+    }
+    
     @Override
     public boolean canDestroy() {
         return !readOnly;

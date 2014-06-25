@@ -95,7 +95,9 @@ import com.jme3.util.BufferUtils;
                     for (int i = 0; i < bonebase.size(); ++i) {
                         this.buildBones(armatureObject.getOldMemoryAddress(), bonebase.get(i), null, bonesList, objectStructure.getOldMemoryAddress(), blenderContext);
                     }
-                    bonesList.add(0, new Bone(""));
+                    if (bonesList.isEmpty() ) {
+                        bonesList.add(0, new Bone(""));
+                    }
                     Bone[] bones = bonesList.toArray(new Bone[bonesList.size()]);
                     skeleton = new Skeleton(bones);
                     blenderContext.setSkeleton(armatureObject.getOldMemoryAddress(), skeleton);
