@@ -67,6 +67,12 @@
                 <pathelement path="${libs.jme3-android.classpath}"/>
             </path>
         </copy>
+        
+        <!--FIXME-->
+        <delete file="mobile/libs/xmlParserAPIs-2.6.2.jar"/>
+        <delete file="mobile/libs/xpp3-1.1.4c.jar"/>
+        <delete file="mobile/libs/android-4.1.1.4.jar"/>
+
     </target>
 
     <target name="-unzip-bullet-libs" depends="-delete-bullet-libs" if="bulletIsIncluded">
