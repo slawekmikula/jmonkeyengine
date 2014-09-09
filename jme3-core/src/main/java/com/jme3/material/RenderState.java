@@ -176,7 +176,14 @@ public class RenderState implements Cloneable, Savable {
          * <p>
          * Result = 2 * Source Color * Dest Color -> (GL_DST_COLOR, GL_SRC_COLOR)
          */
-        ModulateX2
+        ModulateX2,
+        /**
+         * Opposite effect of Modulate/Multiply. Invert both colors, multiply and
+         * then invert the result.
+         * <p>
+         * Result = 1 - (1 - Source Color) * (1 - Dest Color) -> (GL_ONE, GL_ONE_MINUS_SRC_COLOR)
+         */
+        Screen
     }
 
     /**
@@ -1311,6 +1318,44 @@ public class RenderState implements Cloneable, Savable {
         }
         state.cachedHashCode = -1;
         return state;
+    }
+     public void set(RenderState state) {
+        pointSprite = state.pointSprite;
+        wireframe = state.wireframe;
+        cullMode = state.cullMode;
+        depthWrite = state.depthWrite;
+        depthTest = state.depthTest;
+        colorWrite = state.colorWrite;
+        blendMode = state.blendMode;
+        alphaTest = state.alphaTest;
+        alphaFallOff = state.alphaFallOff;
+        offsetEnabled = state.offsetEnabled;
+        offsetFactor = state.offsetFactor;
+        offsetUnits = state.offsetUnits;
+        stencilTest = state.stencilTest;
+        frontStencilStencilFailOperation = state.frontStencilStencilFailOperation;
+        frontStencilDepthFailOperation = state.frontStencilDepthFailOperation;
+        frontStencilDepthPassOperation = state.frontStencilDepthPassOperation;
+        backStencilStencilFailOperation = state.backStencilStencilFailOperation;
+        backStencilDepthFailOperation = state.backStencilDepthFailOperation;
+        backStencilDepthPassOperation = state.backStencilDepthPassOperation;
+        frontStencilFunction = state.frontStencilFunction;
+        backStencilFunction = state.backStencilFunction;
+        depthFunc = state.depthFunc;
+        alphaFunc = state.alphaFunc;
+
+        applyPointSprite = true;
+        applyWireFrame =  true;
+        applyCullMode =  true;
+        applyDepthWrite =  true;
+        applyDepthTest =  true;
+        applyColorWrite = true;
+        applyBlendMode =  true;
+        applyAlphaTest =  true;
+        applyAlphaFallOff =  true;
+        applyPolyOffset =  true;
+        applyDepthFunc =  true;
+        applyAlphaFunc =  false;
     }
 
     @Override

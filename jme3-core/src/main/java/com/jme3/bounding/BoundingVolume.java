@@ -121,7 +121,7 @@ public abstract class BoundingVolume implements Savable, Cloneable, Collidable {
      * @param trans
      *            the transform to affect the bound.
      * @param store
-     *            sphere to store result in
+     *            bounding volume to store result in
      * @return the new bounding volume.
      */
     public abstract BoundingVolume transform(Transform trans, BoundingVolume store);
@@ -193,6 +193,10 @@ public abstract class BoundingVolume implements Savable, Cloneable, Collidable {
 
     public final void setCenter(Vector3f newCenter) {
         center.set(newCenter);
+    }
+
+    public final void setCenter(float x, float y, float z) {
+        center.set(x, y, z);
     }
 
     /**

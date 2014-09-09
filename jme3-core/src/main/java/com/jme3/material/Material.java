@@ -45,6 +45,7 @@ import com.jme3.renderer.Caps;
 import com.jme3.renderer.GL1Renderer;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.Renderer;
+import com.jme3.renderer.RendererException;
 import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Mesh;
@@ -636,6 +637,17 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     }
 
     /**
+     * Pass a float to the material shader.  This version avoids auto-boxing
+     * if the value is already a Float.
+     *
+     * @param name the name of the float defined in the material definition (j3md)
+     * @param value the float value
+     */
+    public void setFloat(String name, Float value) {
+        setParam(name, VarType.Float, value);
+    }
+
+    /**
      * Pass an int to the material shader.
      *
      * @param name the name of the int defined in the material definition (j3md)
@@ -706,7 +718,11 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             if (numInstances == 0) {
                 return;
             }
-            renderer.renderMesh(mesh, lodLevel, numInstances, instGeom.getAllInstanceData());
+            if (renderer.getCaps().contains(Caps.MeshInstancing)) {
+                renderer.renderMesh(mesh, lodLevel, numInstances, instGeom.getAllInstanceData());
+            } else {
+                throw new RendererException("Mesh instancing is not supported by the video hardware");
+            }
         } else {
             renderer.renderMesh(mesh, lodLevel, 1, null);
         }
@@ -830,7 +846,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             Quaternion tmpLightDirection = vars.quat1;
             Quaternion tmpLightPosition = vars.quat2;
             ColorRGBA tmpLightColor = vars.color;
-            Vector4f tmpVec = vars.vect4f;
+            Vector4f tmpVec = vars.vect4f1;
 
             ColorRGBA color = l.getColor();
             tmpLightColor.set(color);

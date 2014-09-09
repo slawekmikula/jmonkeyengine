@@ -556,6 +556,9 @@ public class OGLESShaderRenderer implements Renderer {
                     case ModulateX2:
                         GLES20.glBlendFunc(GLES20.GL_DST_COLOR, GLES20.GL_SRC_COLOR);
                         break;
+                    case Screen:
+                        GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_COLOR);
+                        break; 
                     default:
                         throw new UnsupportedOperationException("Unrecognized blend mode: "
                                 + state.getBlendMode());
@@ -1799,13 +1802,13 @@ public class OGLESShaderRenderer implements Renderer {
         Image[] textures = context.boundTextures;
 
         int type = convertTextureType(tex.getType());
-        if (!context.textureIndexList.moveToNew(unit)) {
+//        if (!context.textureIndexList.moveToNew(unit)) {
 //             if (context.boundTextureUnit != unit){
 //                glActiveTexture(GL_TEXTURE0 + unit);
 //                context.boundTextureUnit = unit;
 //             }
 //             glEnable(type);
-        }
+//        }
 
         if (textures[unit] != image) {
             if (context.boundTextureUnit != unit) {
