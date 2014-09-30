@@ -392,9 +392,22 @@ public class OGLESShaderRenderer implements Renderer {
     public void clearBuffers(boolean color, boolean depth, boolean stencil) {
         int bits = 0;
         if (color) {
+            //See explanations of the depth below, we must enable color write to be able to clear the color buffer
+            if (context.colorWriteEnabled == false) {
+                GLES20.glColorMask(true, true, true, true);
+                context.colorWriteEnabled = true;
+            }
             bits = GLES20.GL_COLOR_BUFFER_BIT;
         }
         if (depth) {
+            //glClear(GL_DEPTH_BUFFER_BIT) seems to not work when glDepthMask is false
+            //here s some link on openl board
+            //http://www.opengl.org/discussion_boards/ubbthreads.php?ubb=showflat&Number=257223
+            //if depth clear is requested, we enable the depthMask
+            if (context.depthWriteEnabled == false) {
+                GLES20.glDepthMask(true);
+                context.depthWriteEnabled = true;
+            }
             bits |= GLES20.GL_DEPTH_BUFFER_BIT;
         }
         if (stencil) {
@@ -559,6 +572,9 @@ public class OGLESShaderRenderer implements Renderer {
                     case Screen:
                         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_COLOR);
                         break; 
+                    case Exclusion:
+                        GLES20.glBlendFunc(GLES20.GL_ONE_MINUS_DST_COLOR, GLES20.GL_ONE_MINUS_SRC_COLOR);
+                        break;
                     default:
                         throw new UnsupportedOperationException("Unrecognized blend mode: "
                                 + state.getBlendMode());
@@ -1947,60 +1963,60 @@ public class OGLESShaderRenderer implements Renderer {
         int usage = convertUsage(vb.getUsage());
         vb.getData().rewind();
 
-        if (created || vb.hasDataSizeChanged()) {
+   //     if (created || vb.hasDataSizeChanged()) {
             // upload data based on format
-            int size = vb.getData().limit() * vb.getFormat().getComponentSize();
+        int size = vb.getData().limit() * vb.getFormat().getComponentSize();
 
-            switch (vb.getFormat()) {
-                case Byte:
-                case UnsignedByte:
-                    GLES20.glBufferData(target, size, (ByteBuffer) vb.getData(), usage);
-                    RendererUtil.checkGLError();
-                    break;
-                case Short:
-                case UnsignedShort:
-                    GLES20.glBufferData(target, size, (ShortBuffer) vb.getData(), usage);
-                    RendererUtil.checkGLError();
-                    break;
-                case Int:
-                case UnsignedInt:
-                    GLES20.glBufferData(target, size, (IntBuffer) vb.getData(), usage);
-                    RendererUtil.checkGLError();
-                    break;
-                case Float:
-                    GLES20.glBufferData(target, size, (FloatBuffer) vb.getData(), usage);
-                    RendererUtil.checkGLError();
-                    break;
-                default:
-                    throw new RuntimeException("Unknown buffer format.");
-            }
-        } else {
-            int size = vb.getData().limit() * vb.getFormat().getComponentSize();
-
-            switch (vb.getFormat()) {
-                case Byte:
-                case UnsignedByte:
-                    GLES20.glBufferSubData(target, 0, size, (ByteBuffer) vb.getData());
-                    RendererUtil.checkGLError();
-                    break;
-                case Short:
-                case UnsignedShort:
-                    GLES20.glBufferSubData(target, 0, size, (ShortBuffer) vb.getData());
-                    RendererUtil.checkGLError();
-                    break;
-                case Int:
-                case UnsignedInt:
-                    GLES20.glBufferSubData(target, 0, size, (IntBuffer) vb.getData());
-                    RendererUtil.checkGLError();
-                    break;
-                case Float:
-                    GLES20.glBufferSubData(target, 0, size, (FloatBuffer) vb.getData());
-                    RendererUtil.checkGLError();
-                    break;
-                default:
-                    throw new RuntimeException("Unknown buffer format.");
-            }
+        switch (vb.getFormat()) {
+            case Byte:
+            case UnsignedByte:
+                GLES20.glBufferData(target, size, (ByteBuffer) vb.getData(), usage);
+                RendererUtil.checkGLError();
+                break;
+            case Short:
+            case UnsignedShort:
+                GLES20.glBufferData(target, size, (ShortBuffer) vb.getData(), usage);
+                RendererUtil.checkGLError();
+                break;
+            case Int:
+            case UnsignedInt:
+                GLES20.glBufferData(target, size, (IntBuffer) vb.getData(), usage);
+                RendererUtil.checkGLError();
+                break;
+            case Float:
+                GLES20.glBufferData(target, size, (FloatBuffer) vb.getData(), usage);
+                RendererUtil.checkGLError();
+                break;
+            default:
+                throw new RuntimeException("Unknown buffer format.");
         }
+//        } else {
+//            int size = vb.getData().limit() * vb.getFormat().getComponentSize();
+//
+//            switch (vb.getFormat()) {
+//                case Byte:
+//                case UnsignedByte:
+//                    GLES20.glBufferSubData(target, 0, size, (ByteBuffer) vb.getData());
+//                    RendererUtil.checkGLError();
+//                    break;
+//                case Short:
+//                case UnsignedShort:
+//                    GLES20.glBufferSubData(target, 0, size, (ShortBuffer) vb.getData());
+//                    RendererUtil.checkGLError();
+//                    break;
+//                case Int:
+//                case UnsignedInt:
+//                    GLES20.glBufferSubData(target, 0, size, (IntBuffer) vb.getData());
+//                    RendererUtil.checkGLError();
+//                    break;
+//                case Float:
+//                    GLES20.glBufferSubData(target, 0, size, (FloatBuffer) vb.getData());
+//                    RendererUtil.checkGLError();
+//                    break;
+//                default:
+//                    throw new RuntimeException("Unknown buffer format.");
+//            }
+//        }
         vb.clearUpdateNeeded();
     }
 
