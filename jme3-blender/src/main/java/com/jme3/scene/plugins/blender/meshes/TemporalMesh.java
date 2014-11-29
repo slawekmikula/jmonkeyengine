@@ -5,7 +5,6 @@ import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -32,7 +31,6 @@ import com.jme3.scene.plugins.blender.BlenderContext.LoadedDataType;
 import com.jme3.scene.plugins.blender.file.BlenderFileException;
 import com.jme3.scene.plugins.blender.file.Structure;
 import com.jme3.scene.plugins.blender.materials.MaterialContext;
-import com.jme3.scene.plugins.blender.meshes.IndexesLoop.IndexPredicate;
 import com.jme3.scene.plugins.blender.meshes.MeshBuffers.BoneBuffersData;
 import com.jme3.scene.plugins.blender.modifiers.Modifier;
 import com.jme3.scene.plugins.blender.objects.Properties;
@@ -76,6 +74,10 @@ public class TemporalMesh extends Geometry {
     protected List<Edge>               edges                     = new ArrayList<Edge>();
     /** The points of the mesh. */
     protected List<Point>              points                    = new ArrayList<Point>();
+    /** A map between index and faces that contain it (for faster index - face queries). */
+    protected Map<Integer, Set<Face>>  indexToFaceMapping        = new HashMap<Integer, Set<Face>>();
+    /** A map between index and edges that contain it (for faster index - edge queries). */
+    protected Map<Integer, Set<Edge>>  indexToEdgeMapping        = new HashMap<Integer, Set<Edge>>();
 
     /** The bounding box of the temporal mesh. */
     protected BoundingBox              boundingBox;
@@ -106,10 +108,11 @@ public class TemporalMesh extends Geometry {
      */
     protected TemporalMesh(Structure meshStructure, BlenderContext blenderContext, boolean loadData) throws BlenderFileException {
         this.blenderContext = blenderContext;
-        name = meshStructure.getName();
         this.meshStructure = meshStructure;
 
         if (loadData) {
+            name = meshStructure.getName();
+
             MeshHelper meshHelper = blenderContext.getHelper(MeshHelper.class);
 
             meshHelper.loadVerticesAndNormals(meshStructure, vertices, normals);
@@ -118,15 +121,132 @@ public class TemporalMesh extends Geometry {
             vertexGroups = meshHelper.loadVerticesGroups(meshStructure);
 
             faces = Face.loadAll(meshStructure, userUVGroups, verticesColors, this, blenderContext);
-            edges = Edge.loadAll(meshStructure);
+            edges = Edge.loadAll(meshStructure, this);
             points = Point.loadAll(meshStructure);
+
+            this.rebuildIndexesMappings();
         }
+    }
+
+    /**
+     * @return the blender context
+     */
+    public BlenderContext getBlenderContext() {
+        return blenderContext;
+    }
+
+    /**
+     * @return the vertices of the mesh
+     */
+    public List<Vector3f> getVertices() {
+        return vertices;
+    }
+
+    /**
+     * @return the normals of the mesh
+     */
+    public List<Vector3f> getNormals() {
+        return normals;
+    }
+
+    /**
+     * @return all faces
+     */
+    public List<Face> getFaces() {
+        return faces;
+    }
+
+    /**
+     * @return all edges
+     */
+    public List<Edge> getEdges() {
+        return edges;
+    }
+
+    /**
+     * @return all points (do not mistake it with vertices)
+     */
+    public List<Point> getPoints() {
+        return points;
+    }
+
+    /**
+     * @return all vertices colors
+     */
+    public List<byte[]> getVerticesColors() {
+        return verticesColors;
+    }
+
+    /**
+     * @return all vertex groups for the vertices (each map has groups for the proper vertex)
+     */
+    public List<Map<String, Float>> getVertexGroups() {
+        return vertexGroups;
+    }
+
+    /**
+     * @return the faces that contain the given index or null if none contain it
+     */
+    public Collection<Face> getAdjacentFaces(Integer index) {
+        return indexToFaceMapping.get(index);
+    }
+
+    /**
+     * @param the
+     *            edge of the mesh
+     * @return a list of faces that contain the given edge or an empty list
+     */
+    public Collection<Face> getAdjacentFaces(Edge edge) {
+        List<Face> result = new ArrayList<Face>(indexToFaceMapping.get(edge.getFirstIndex()));
+        Set<Face> secondIndexAdjacentFaces = indexToFaceMapping.get(edge.getSecondIndex());
+        if (secondIndexAdjacentFaces != null) {
+            result.retainAll(indexToFaceMapping.get(edge.getSecondIndex()));
+        }
+        return result;
+    }
+
+    /**
+     * @param the
+     *            index of the mesh
+     * @return a list of edges that contain the index
+     */
+    public Collection<Edge> getAdjacentEdges(Integer index) {
+        return indexToEdgeMapping.get(index);
+    }
+
+    /**
+     * Tells if the given edge is a boundary edge. The boundary edge means that it belongs to a single
+     * face or to none.
+     * @param the
+     *            edge of the mesh
+     * @return <b>true</b> if the edge is a boundary one and <b>false</b> otherwise
+     */
+    public boolean isBoundary(Edge edge) {
+        return this.getAdjacentFaces(edge).size() <= 1;
+    }
+
+    /**
+     * The method tells if the given index is a boundary index. A boundary index belongs to at least
+     * one boundary edge.
+     * @param index
+     *            the index of the mesh
+     * @return <b>true</b> if the index is a boundary one and <b>false</b> otherwise
+     */
+    public boolean isBoundary(Integer index) {
+        Collection<Edge> adjacentEdges = this.getAdjacentEdges(index);
+        for (Edge edge : adjacentEdges) {
+            if (this.isBoundary(edge)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public TemporalMesh clone() {
         try {
             TemporalMesh result = new TemporalMesh(meshStructure, blenderContext, false);
+            result.name = name;
             for (Vector3f v : vertices) {
                 result.vertices.add(v.clone());
             }
@@ -152,6 +272,7 @@ public class TemporalMesh extends Geometry {
             for (Point point : points) {
                 result.points.add(point.clone());
             }
+            result.rebuildIndexesMappings();
             return result;
         } catch (BlenderFileException e) {
             LOGGER.log(Level.SEVERE, "Error while cloning the temporal mesh: {0}. Returning null.", e.getLocalizedMessage());
@@ -160,17 +281,38 @@ public class TemporalMesh extends Geometry {
     }
 
     /**
-     * @return the vertices of the mesh
+     * The method rebuilds the mappings between faces and edges. Should be called after
+     * every major change of the temporal mesh done outside it.
+     * @note I will remove this method soon and make the mappings to be done automatically
+     *       when the mesh is modified.
      */
-    protected List<Vector3f> getVertices() {
-        return vertices;
-    }
-
-    /**
-     * @return the normals of the mesh
-     */
-    protected List<Vector3f> getNormals() {
-        return normals;
+    public void rebuildIndexesMappings() {
+        indexToEdgeMapping.clear();
+        indexToFaceMapping.clear();
+        for (Face face : faces) {
+            for (Integer index : face.getIndexes()) {
+                Set<Face> faces = indexToFaceMapping.get(index);
+                if (faces == null) {
+                    faces = new HashSet<Face>();
+                    indexToFaceMapping.put(index, faces);
+                }
+                faces.add(face);
+            }
+        }
+        for (Edge edge : edges) {
+            Set<Edge> edges = indexToEdgeMapping.get(edge.getFirstIndex());
+            if (edges == null) {
+                edges = new HashSet<Edge>();
+                indexToEdgeMapping.put(edge.getFirstIndex(), edges);
+            }
+            edges.add(edge);
+            edges = indexToEdgeMapping.get(edge.getSecondIndex());
+            if (edges == null) {
+                edges = new HashSet<Edge>();
+                indexToEdgeMapping.put(edge.getSecondIndex(), edges);
+            }
+            edges.add(edge);
+        }
     }
 
     @Override
@@ -212,7 +354,7 @@ public class TemporalMesh extends Geometry {
     public void triangulate() {
         LOGGER.fine("Triangulating temporal mesh.");
         for (Face face : faces) {
-            face.triangulate(vertices, normals);
+            face.triangulate();
         }
     }
 
@@ -246,19 +388,8 @@ public class TemporalMesh extends Geometry {
         vertexGroups.addAll(mesh.vertexGroups);
         verticesColors.addAll(mesh.verticesColors);
         boneIndexes.putAll(mesh.boneIndexes);
-    }
 
-    /**
-     * Translate all vertices by the given vector.
-     * @param translation
-     *            the translation vector
-     * @return this mesh after translation (NO new instance is created)
-     */
-    public TemporalMesh translate(Vector3f translation) {
-        for (Vector3f v : vertices) {
-            v.addLocal(translation);
-        }
-        return this;
+        this.rebuildIndexesMappings();
     }
 
     /**
@@ -305,47 +436,6 @@ public class TemporalMesh extends Geometry {
     }
 
     /**
-     * Returns the vertex at the given position.
-     * @param i
-     *            the vertex position
-     * @return the vertex at the given position
-     */
-    public Vector3f getVertex(int i) {
-        return vertices.get(i);
-    }
-
-    /**
-     * Returns the normal at the given position.
-     * @param i
-     *            the normal position
-     * @return the normal at the given position
-     */
-    public Vector3f getNormal(int i) {
-        return normals.get(i);
-    }
-
-    /**
-     * Returns the vertex groups at the given vertex index.
-     * @param i
-     *            the vertex groups for vertex with a given index
-     * @return the vertex groups at the given vertex index
-     */
-    public Map<String, Float> getVertexGroups(int i) {
-        return vertexGroups.size() > i ? vertexGroups.get(i) : null;
-    }
-
-    /**
-     * @return a collection of vertex group names for this mesh
-     */
-    public Collection<String> getVertexGroupNames() {
-        Set<String> result = new HashSet<String>();
-        for (Map<String, Float> groups : vertexGroups) {
-            result.addAll(groups.keySet());
-        }
-        return result;
-    }
-
-    /**
      * Removes all vertices from the mesh.
      */
     public void clear() {
@@ -356,86 +446,8 @@ public class TemporalMesh extends Geometry {
         faces.clear();
         edges.clear();
         points.clear();
-    }
-
-    /**
-     * Every face, edge and point that contains
-     * the vertex will be removed.
-     * @param index
-     *            the index of a vertex to be removed
-     * @throws IndexOutOfBoundsException
-     *             thrown when given index is negative or beyond the count of vertices
-     */
-    public void removeVertexAt(final int index) {
-        if (index < 0 || index >= vertices.size()) {
-            throw new IndexOutOfBoundsException("The given index is out of bounds: " + index);
-        }
-
-        vertices.remove(index);
-        normals.remove(index);
-        if(vertexGroups.size() > 0) {
-            vertexGroups.remove(index);
-        }
-        if(verticesColors.size() > 0) {
-            verticesColors.remove(index);
-        }
-
-        IndexPredicate shiftPredicate = new IndexPredicate() {
-            @Override
-            public boolean execute(Integer i) {
-                return i > index;
-            }
-        };
-        for (int i = faces.size() - 1; i >= 0; --i) {
-            Face face = faces.get(i);
-            if (face.getIndexes().indexOf(index) >= 0) {
-                faces.remove(i);
-            } else {
-                face.getIndexes().shiftIndexes(-1, shiftPredicate);
-            }
-        }
-        for (int i = edges.size() - 1; i >= 0; --i) {
-            Edge edge = edges.get(i);
-            if (edge.getFirstIndex() == index || edge.getSecondIndex() == index) {
-                edges.remove(i);
-            } else {
-                edge.shiftIndexes(-1, shiftPredicate);
-            }
-        }
-        for (int i = points.size() - 1; i >= 0; --i) {
-            Point point = points.get(i);
-            if (point.getIndex() == index) {
-                points.remove(i);
-            } else {
-                point.shiftIndexes(-1, shiftPredicate);
-            }
-        }
-    }
-
-    /**
-     * Flips the order of the mesh's indexes.
-     */
-    public void flipIndexes() {
-        for (Face face : faces) {
-            face.flipIndexes();
-        }
-        for (Edge edge : edges) {
-            edge.flipIndexes();
-        }
-        Collections.reverse(points);
-    }
-
-    /**
-     * Flips UV coordinates.
-     * @param u
-     *            indicates if U coords should be flipped
-     * @param v
-     *            indicates if V coords should be flipped
-     */
-    public void flipUV(boolean u, boolean v) {
-        for (Face face : faces) {
-            face.flipUV(u, v);
-        }
+        indexToEdgeMapping.clear();
+        indexToFaceMapping.clear();
     }
 
     /**
@@ -499,21 +511,28 @@ public class TemporalMesh extends Geometry {
                     int vertIndex = indexes.get(i);
                     tempVerts[i] = vertices.get(vertIndex);
                     tempNormals[i] = normals.get(vertIndex);
-                    tempVertColors[i] = vertexColors != null ? vertexColors.get(i) : null;
+                    tempVertColors[i] = vertexColors != null ? vertexColors.get(face.getIndexes().indexOf(vertIndex)) : null;
 
-                    if (boneIndexes.size() > 0) {
+                    if (boneIndexes.size() > 0 && vertexGroups.size() > 0) {
                         Map<Float, Integer> boneBuffersForVertex = new HashMap<Float, Integer>();
                         Map<String, Float> vertexGroupsForVertex = vertexGroups.get(vertIndex);
                         for (Entry<String, Integer> entry : boneIndexes.entrySet()) {
                             if (vertexGroupsForVertex.containsKey(entry.getKey())) {
-                                boneBuffersForVertex.put(vertexGroupsForVertex.get(entry.getKey()), entry.getValue());
+                                float weight = vertexGroupsForVertex.get(entry.getKey());
+                                if(weight > 0) {// no need to use such weights
+                                    boneBuffersForVertex.put(weight, entry.getValue());
+                                }
                             }
+                        }
+                        if(boneBuffersForVertex.size() == 0) {// attach the vertex to zero-indexed bone so that it does not collapse to (0, 0, 0)
+                            boneBuffersForVertex.put(1.0f, 0);
                         }
                         boneBuffers.add(boneBuffersForVertex);
                     }
                 }
 
-                meshBuffers.append(face.isSmooth(), tempVerts, tempNormals, face.getUvSets(), tempVertColors, boneBuffers);
+                Map<String, List<Vector2f>> uvs = meshHelper.selectUVSubset(face, indexes.toArray(new Integer[indexes.size()]));
+                meshBuffers.append(face.isSmooth(), tempVerts, tempNormals, uvs, tempVertColors, boneBuffers);
             }
         }
 
@@ -589,7 +608,12 @@ public class TemporalMesh extends Geometry {
             LOGGER.fine("Preparing lines geometries.");
 
             List<List<Integer>> separateEdges = new ArrayList<List<Integer>>();
-            List<Edge> edges = new ArrayList<Edge>(this.edges);
+            List<Edge> edges = new ArrayList<Edge>(this.edges.size());
+            for (Edge edge : this.edges) {
+                if (!edge.isInFace()) {
+                    edges.add(edge);
+                }
+            }
             while (edges.size() > 0) {
                 boolean edgeAppended = false;
                 int edgeIndex = 0;
@@ -630,7 +654,7 @@ public class TemporalMesh extends Geometry {
                     meshBuffers.append(vertices.get(index), normals.get(index));
                 }
                 Mesh mesh = new Mesh();
-                mesh.setPointSize(2);
+                mesh.setLineWidth(blenderContext.getBlenderKey().getLinesWidth());
                 mesh.setMode(Mode.LineStrip);
                 if (meshBuffers.isShortIndexBuffer()) {
                     mesh.setBuffer(Type.Index, 1, (ShortBuffer) meshBuffers.getIndexBuffer());
@@ -688,5 +712,25 @@ public class TemporalMesh extends Geometry {
     @Override
     public String toString() {
         return "TemporalMesh [name=" + name + ", vertices.size()=" + vertices.size() + "]";
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (meshStructure == null ? 0 : meshStructure.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof TemporalMesh)) {
+            return false;
+        }
+        TemporalMesh other = (TemporalMesh) obj;
+        return meshStructure.getOldMemoryAddress().equals(other.meshStructure.getOldMemoryAddress());
     }
 }

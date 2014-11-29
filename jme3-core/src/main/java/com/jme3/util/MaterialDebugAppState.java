@@ -43,7 +43,6 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.Trigger;
 import com.jme3.material.MatParam;
 import com.jme3.material.Material;
-import com.jme3.material.RenderState;
 import com.jme3.post.Filter;
 import com.jme3.post.Filter.Pass;
 import com.jme3.renderer.RenderManager;
@@ -196,7 +195,7 @@ public class MaterialDebugAppState extends AbstractAppState {
         }
     }
 
-    private Material reloadMaterial(Material mat) {
+    public Material reloadMaterial(Material mat) {
         //clear the entire cache, there might be more clever things to do, like clearing only the matdef, and the associated shaders.
         ((DesktopAssetManager) assetManager).clearCache();
 
@@ -267,7 +266,7 @@ public class MaterialDebugAppState extends AbstractAppState {
 
         public void reload() {
             Material reloadedMat = reloadMaterial(geom.getMaterial());
-            //if the reload is successful, we re setupt the material with its params and reassign it to the box
+            //if the reload is successful, we re setup the material with its params and reassign it to the box
             if (reloadedMat != null) {
                 // setupMaterial(reloadedMat);
                 geom.setMaterial(reloadedMat);

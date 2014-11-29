@@ -31,7 +31,11 @@
  */
 package com.jme3.texture;
 
-import com.jme3.export.*;
+import com.jme3.export.InputCapsule;
+import com.jme3.export.JmeExporter;
+import com.jme3.export.JmeImporter;
+import com.jme3.export.OutputCapsule;
+import com.jme3.export.Savable;
 import com.jme3.math.FastMath;
 import com.jme3.renderer.Caps;
 import com.jme3.renderer.Renderer;
@@ -62,20 +66,16 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
          */
         Alpha8(8),
         
-        /**
-         * 16-bit alpha
-         */
-        Alpha16(16),
+        @Deprecated
+        Reserved1(0),
 
         /**
          * 8-bit grayscale/luminance.
          */
         Luminance8(8),
         
-        /**
-         * 16-bit grayscale/luminance.
-         */
-        Luminance16(16),
+        @Deprecated
+        Reserved2(0),
         
         /**
          * half-precision floating-point grayscale/luminance.
@@ -96,10 +96,8 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
          */
         Luminance8Alpha8(16),
         
-        /**
-         * 16-bit luminance/grayscale and 16-bit alpha.
-         */
-        Luminance16Alpha16(32),
+        @Deprecated
+        Reserved3(0),
         
         /**
          * half-precision floating-point grayscale/luminance and alpha.
@@ -109,10 +107,10 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         Luminance16FAlpha16F(32,true),
 
         @Deprecated
-        Intensity8(8),
+        Reserved4(0),
         
         @Deprecated
-        Intensity16(16),
+        Reserved5(0),
 
         /**
          * 8-bit blue, green, and red.
@@ -125,22 +123,18 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         RGB8(24),
         
         @Deprecated
-        RGB10(30),
+        Reserved6(0),
         
-        /**
-         * 16-bit red, green, and blue.
-         */
-        RGB16(48),
+        @Deprecated
+        Reserved7(0),
 
         /**
          * 5-bit red, 6-bit green, and 5-bit blue.
          */
         RGB565(16),
         
-        /**
-         * 4-bit alpha, red, green, and blue. Used on Android only.
-         */
-        ARGB4444(16),
+        @Deprecated
+        Reserved8(0),
         
         /**
          * 5-bit red, green, and blue with 1-bit alpha.
@@ -167,10 +161,8 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
          */
         BGRA8(32),
         
-        /**
-         * 16-bit red, green, blue and alpha
-         */
-        RGBA16(64),
+        @Deprecated
+        Reserved9(0),
 
         /**
          * S3TC compression DXT1. 
@@ -199,7 +191,7 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
          * @deprecated Not supported by OpenGL 3.0.
          */
         @Deprecated
-        LATC(8, false, true, false),
+        Reserved10(0),
 
         /**
          * Arbitrary depth format. The precision is chosen by the video
@@ -289,14 +281,8 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
          */
         RGBA32F(128,true),
 
-        /**
-         * Luminance/grayscale texture compression. 
-         * Called BC4 in DirectX10.
-         * 
-         * @deprecated Not supported by OpenGL 3.0.
-         */
         @Deprecated
-        LTC(4, false, true, false),
+        Reserved11(0),
         
         /**
          * 24-bit depth with 8-bit stencil. 
@@ -304,16 +290,15 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
          */
         Depth24Stencil8(32, true, false, false),
         
+        @Deprecated
+        Reserved12(0),
+        
         /**
-         * 10 bits each for RGB, 2 for Alpha. This can be a useful format for
-         * framebuffers, if you do not need a high-precision destination alpha
-         * value. It carries more color depth, thus preserving subtle
-         * gradations. They can also be used for normals, though there is no
-         * signed-normalized version, so you have to do the conversion manually.
-         * It is also a required format, so you can count on it
-         * being present.
+         * Ericsson Texture Compression. Typically used on Android.
+         * 
+         * Requires {@link Caps#TextureCompressionETC1}.
          */
-        RGB10_A2(32, false);
+        ETC1(4, false, true, false);
 
         private int bpp;
         private boolean isDepth;
@@ -350,6 +335,13 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         }
 
         /**
+         * @return True if this format is a depth + stencil (packed) format, false otherwise.
+         */
+        boolean isDepthStencilFormat() {
+            return this == Depth24Stencil8;
+        }
+
+        /**
          * @return True if this is a compressed image format, false if
          * uncompressed.
          */
@@ -364,6 +356,8 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         public boolean isFloatingPont(){
             return isFloatingPoint;
         }
+
+
 
     }
 

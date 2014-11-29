@@ -32,18 +32,20 @@
 
 package com.jme3.renderer.lwjgl;
 
+import com.jme3.renderer.Caps;
 import com.jme3.renderer.RendererException;
 import com.jme3.texture.Image;
 import com.jme3.texture.Image.Format;
 import com.jme3.texture.image.ColorSpace;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static org.lwjgl.opengl.ARBDepthBufferFloat.*;
+import org.lwjgl.opengl.ARBES3Compatibility;
 import static org.lwjgl.opengl.ARBHalfFloatPixel.*;
 import static org.lwjgl.opengl.ARBTextureFloat.*;
 import static org.lwjgl.opengl.ARBTextureMultisample.*;
-import org.lwjgl.opengl.ContextCapabilities;
 import static org.lwjgl.opengl.EXTPackedDepthStencil.*;
 import static org.lwjgl.opengl.EXTPackedFloat.*;
 import static org.lwjgl.opengl.EXTTextureArray.*;
@@ -55,7 +57,6 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.*;
 import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL14.*;
-import static org.lwjgl.opengl.GL20.*;
 
 class TextureUtil {
 
@@ -83,17 +84,14 @@ class TextureUtil {
     static {
         // Alpha formats
         setFormat(Format.Alpha8,  GL_ALPHA8,  GL_ALPHA, GL_UNSIGNED_BYTE, false);
-        setFormat(Format.Alpha16, GL_ALPHA16, GL_ALPHA, GL_UNSIGNED_SHORT, false);
         
         // Luminance formats
         setFormat(Format.Luminance8,   GL_LUMINANCE8,  GL_LUMINANCE, GL_UNSIGNED_BYTE, false);
-        setFormat(Format.Luminance16,  GL_LUMINANCE16, GL_LUMINANCE, GL_UNSIGNED_SHORT, false);
         setFormat(Format.Luminance16F, GL_LUMINANCE16F_ARB, GL_LUMINANCE, GL_HALF_FLOAT_ARB, false);
         setFormat(Format.Luminance32F, GL_LUMINANCE32F_ARB, GL_LUMINANCE, GL_FLOAT, false);
         
         // Luminance alpha formats
         setFormat(Format.Luminance8Alpha8, GL_LUMINANCE8_ALPHA8,  GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, false);
-        setFormat(Format.Luminance16Alpha16, GL_LUMINANCE16_ALPHA16, GL_LUMINANCE_ALPHA, GL_UNSIGNED_SHORT, false);
         setFormat(Format.Luminance16FAlpha16F, GL_LUMINANCE_ALPHA16F_ARB, GL_LUMINANCE_ALPHA, GL_HALF_FLOAT_ARB, false);
         
         // Depth formats
@@ -111,8 +109,6 @@ class TextureUtil {
         setFormat(Format.ARGB8,       GL_RGBA8,  GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, false);
         setFormat(Format.BGRA8,       GL_RGBA8,  GL_BGRA, GL_UNSIGNED_BYTE, false);
         setFormat(Format.RGB8,        GL_RGB8,   GL_RGB,  GL_UNSIGNED_BYTE, false);
-//        setFormat(Format.RGB10,      GL_RGB10, GL_RGB,        GL_UNSIGNED_INT_10_10_10_2, false); 
-        setFormat(Format.RGB16,      GL_RGB16, GL_RGB,  GL_UNSIGNED_SHORT, false); 
         setFormat(Format.RGB16F,     GL_RGB16F_ARB, GL_RGB, GL_HALF_FLOAT_ARB, false);
         setFormat(Format.RGB32F,     GL_RGB32F_ARB, GL_RGB, GL_FLOAT, false);
         
@@ -121,14 +117,11 @@ class TextureUtil {
         setFormat(Format.RGB9E5,               GL_RGB9_E5_EXT,         GL_RGB, GL_UNSIGNED_INT_5_9_9_9_REV_EXT, false);
         setFormat(Format.RGB16F_to_RGB111110F, GL_R11F_G11F_B10F_EXT, GL_RGB, GL_HALF_FLOAT_ARB, false);
         setFormat(Format.RGB16F_to_RGB9E5,     GL_RGB9_E5_EXT,         GL_RGB, GL_HALF_FLOAT_ARB, false);
-        setFormat(Format.RGB10_A2,             GL_RGB10_A2,        GL_RGBA, GL_UNSIGNED_INT_10_10_10_2, false);
         
         // RGBA formats
         setFormat(Format.ABGR8,   GL_RGBA8,  GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, false);
         setFormat(Format.RGB5A1,  GL_RGB5_A1, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, false);
-        setFormat(Format.ARGB4444,GL_RGBA4,   GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4_REV, false);
         setFormat(Format.RGBA8,   GL_RGBA8,   GL_RGBA, GL_UNSIGNED_BYTE, false);
-        setFormat(Format.RGBA16,  GL_RGBA16,  GL_RGBA, GL_UNSIGNED_SHORT, false); // might be incorrect
         setFormat(Format.RGBA16F, GL_RGBA16F_ARB, GL_RGBA, GL_HALF_FLOAT_ARB, false);
         setFormat(Format.RGBA32F, GL_RGBA32F_ARB, GL_RGBA, GL_FLOAT, false);
         
@@ -138,9 +131,10 @@ class TextureUtil {
         setFormat(Format.DXT3,  GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, GL_RGBA, GL_UNSIGNED_BYTE, true);
         setFormat(Format.DXT5,  GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_RGBA, GL_UNSIGNED_BYTE, true);
     
-        // LTC/LATC/3Dc formats
-        setFormat(Format.LTC,  GL_COMPRESSED_LUMINANCE_LATC1_EXT,       GL_LUMINANCE,       GL_UNSIGNED_BYTE, true);
-        setFormat(Format.LATC, GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, true);   
+        // ETC1 support on regular OpenGL requires ES3 compatibility extension.
+        // NOTE: ETC2 is backwards compatible with ETC1, so we can 
+        // upload ETC1 textures as ETC2.
+        setFormat(Format.ETC1, ARBES3Compatibility.GL_COMPRESSED_RGB8_ETC2, GL_RGB, GL_UNSIGNED_BYTE, true);
     }
     
     //sRGB formats        
@@ -157,18 +151,23 @@ class TextureUtil {
     private static final GLImageFormat sRGB_DXT3 = new GLImageFormat(GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, GL_RGBA, GL_UNSIGNED_BYTE, true);
     private static final GLImageFormat sRGB_DXT5 = new GLImageFormat(GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, GL_RGBA, GL_UNSIGNED_BYTE, true);
 
-    public static GLImageFormat getImageFormat(ContextCapabilities caps, Format fmt, boolean isSrgb){
+    public static GLImageFormat getImageFormat(EnumSet<Caps> caps, Format fmt, boolean isSrgb){
         switch (fmt){
+            case ETC1:
+                if (!caps.contains(Caps.TextureCompressionETC1)) {
+                    return null;
+                }
+                break;
             case DXT1:
             case DXT1A:
             case DXT3:
             case DXT5:
-                if (!caps.GL_EXT_texture_compression_s3tc) {
+                if (!caps.contains(Caps.TextureCompressionS3TC)) {
                     return null;
                 }
                 break;
             case Depth24Stencil8:
-                if (!caps.OpenGL30 && !caps.GL_EXT_packed_depth_stencil){
+                if (!caps.contains(Caps.PackedDepthStencilBuffer)){
                     return null;
                 }
                 break;
@@ -179,30 +178,24 @@ class TextureUtil {
             case RGB32F:
             case RGBA16F:
             case RGBA32F:
-                if (!caps.OpenGL30 && !caps.GL_ARB_texture_float){
+                if (!caps.contains(Caps.FloatTexture)){
                     return null;
                 }
                 break;
             case Depth32F:
-                if (!caps.OpenGL30 && !caps.GL_NV_depth_buffer_float){
-                    return null;
-                }
-                break;
-            case LATC:
-            case LTC:
-                if (!caps.GL_EXT_texture_compression_latc){
+                if (!caps.contains(Caps.FloatDepthBuffer)){
                     return null;
                 }
                 break;
             case RGB9E5:
             case RGB16F_to_RGB9E5:
-                if (!caps.OpenGL30 && !caps.GL_EXT_texture_shared_exponent){
+                if (!caps.contains(Caps.SharedExponentTexture)){
                     return null;
                 }
                 break;
             case RGB111110F:
             case RGB16F_to_RGB111110F:
-                if (!caps.OpenGL30 && !caps.GL_EXT_packed_float){
+                if (!caps.contains(Caps.PackedFloatTexture)){
                     return null;
                 }
                 break;
@@ -214,7 +207,7 @@ class TextureUtil {
         }
     }
     
-    public static GLImageFormat getImageFormatWithError(ContextCapabilities caps, Format fmt, boolean isSrgb) {
+    public static GLImageFormat getImageFormatWithError(EnumSet<Caps> caps, Format fmt, boolean isSrgb) {
         GLImageFormat glFmt = getImageFormat(caps, fmt, isSrgb);
         if (glFmt == null) {
             throw new RendererException("Image format '" + fmt + "' is unsupported by the video hardware.");
@@ -254,7 +247,7 @@ class TextureUtil {
         }
     }
     
-    public static void uploadTexture(ContextCapabilities caps,
+    public static void uploadTexture(EnumSet<Caps> caps,
                                      Image image,
                                      int target,
                                      int index,
@@ -305,13 +298,25 @@ class TextureUtil {
             if (glFmt.compressed && data != null){
                 if (target == GL_TEXTURE_3D){
                     glCompressedTexImage3D(target,
-                                            i,
-                                            glFmt.internalFormat,
-                                            mipWidth,
-                                            mipHeight,
-                                            mipDepth,
-                                            border,
-                                            data);
+                                           i,
+                                           glFmt.internalFormat,
+                                           mipWidth,
+                                           mipHeight,
+                                           mipDepth,
+                                           border,
+                                           data);
+                } else if (target == GL_TEXTURE_2D_ARRAY_EXT) {
+                    // Upload compressed texture array slice
+                    glCompressedTexSubImage3D(target, 
+                                              i, 
+                                              0, 
+                                              0, 
+                                              index, 
+                                              mipWidth, 
+                                              mipHeight, 
+                                              1, 
+                                              glFmt.internalFormat, 
+                                              data);
                 }else{
                     //all other targets use 2D: array, cubemap, 2d
                     glCompressedTexImage2D(target,
@@ -354,8 +359,8 @@ class TextureUtil {
                                         0, // xoffset
                                         0, // yoffset
                                         index, // zoffset
-                                        width, // width
-                                        height, // height
+                                        mipWidth, // width
+                                        mipHeight, // height
                                         1, // depth
                                         glFmt.format,
                                         glFmt.dataType,
@@ -412,7 +417,7 @@ class TextureUtil {
      * @param y the y position where to put the image in the texture
      */
     public static void uploadSubTexture(
-        ContextCapabilities caps,
+        EnumSet<Caps> caps,
         Image image,
         int target,
         int index,

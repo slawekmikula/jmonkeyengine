@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
+import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.*;
@@ -14,17 +15,14 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import com.jme3.audio.AudioRenderer;
-import com.jme3.audio.android.AndroidAudioRenderer;
 import com.jme3.input.JoyInput;
 import com.jme3.input.TouchInput;
 import com.jme3.input.android.AndroidSensorJoyInput;
 import com.jme3.input.controls.TouchListener;
 import com.jme3.input.controls.TouchTrigger;
 import com.jme3.input.event.TouchEvent;
-import com.jme3.renderer.android.AndroidGLSurfaceView;
 import com.jme3.system.AppSettings;
 import com.jme3.system.SystemListener;
-import com.jme3.system.android.AndroidConfigChooser.ConfigType;
 import com.jme3.system.android.JmeAndroidSystem;
 import com.jme3.system.android.OGLESContext;
 import com.jme3.util.AndroidLogHandler;
@@ -53,18 +51,6 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
      * The jme3 application object
      */
     protected Application app = null;
-
-    /**
-     * ConfigType.FASTEST is RGB565, GLSurfaceView default ConfigType.BEST is
-     * RGBA8888 or better if supported by the hardware
-     * @deprecated ConfigType has been deprecated.  AppSettings are now used
-     * to determine the desired configuration to match how LWJGL is implemented.
-     * Use eglBitsPerPixel, eglAlphaBits, eglDepthBits, eglStencilBits in MainActivity to
-     * override the default values
-     * (default values: RGB888, 0 alpha bits, 16 bit depth, 0 stencil bits)
-     */
-    @Deprecated
-    protected ConfigType eglConfigType = null;
 
     /**
      * Sets the desired RGB size for the surfaceview.  16 = RGB565, 24 = RGB888.
@@ -103,23 +89,9 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
     protected int eglStencilBits = 0;
 
     /**
-     * If true all valid and not valid egl configs are logged
-     * @deprecated this has no use
-     */
-    @Deprecated
-    protected boolean eglConfigVerboseLogging = false;
-
-    /**
-     * set to 2, 4 to enable multisampling.
-     * @deprecated Use eglSamples
-     */
-    @Deprecated
-    protected int antiAliasingSamples = 0;
-
-    /**
      * Sets the type of Audio Renderer to be used.
      * <p>
-     * Android MediaPlayer / SoundPool is the default and can be used on all
+     * Android MediaPlayer / SoundPool can be used on all
      * supported Android platform versions (2.2+)<br>
      * OpenAL Soft uses an OpenSL backend and is only supported on Android
      * versions 2.3+.
@@ -127,7 +99,7 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
      * Only use ANDROID_ static strings found in AppSettings
      *
      */
-    protected String audioRendererType = AppSettings.ANDROID_MEDIAPLAYER;
+    protected String audioRendererType = AppSettings.ANDROID_OPENAL_SOFT;
 
     /**
      * If true Android Sensors are used as simulated Joysticks. Users can use the
@@ -195,7 +167,7 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
      */
     protected int screenOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR;
     protected OGLESContext ctx;
-    protected AndroidGLSurfaceView view = null;
+    protected GLSurfaceView view = null;
     protected boolean isGLThreadPaused = true;
     protected ImageView splashImageView = null;
     protected FrameLayout frameLayout = null;
@@ -213,7 +185,6 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
         final DataObject data = new DataObject();
         data.app = this.app;
         inConfigChange = true;
-
         return data;
     }
 
@@ -254,43 +225,15 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
             settings.setEmulateMouse(mouseEventsEnabled);
             settings.setEmulateMouseFlipAxis(mouseEventsInvertX, mouseEventsInvertY);
             settings.setUseJoysticks(joystickEventsEnabled);
-            if (eglConfigType == null) {
-                logger.log(Level.FINE, "using new appsettings for eglConfig");
-                settings.setBitsPerPixel(eglBitsPerPixel);
-                settings.setAlphaBits(eglAlphaBits);
-                settings.setDepthBits(eglDepthBits);
-                settings.setSamples(eglSamples);
-                settings.setStencilBits(eglStencilBits);
-            } else {
-                logger.log(Level.FINE, "using old eglConfigType {0} for eglConfig", eglConfigType);
-                switch (eglConfigType) {
-                    case BEST:
-                        settings.setBitsPerPixel(24);
-                        settings.setAlphaBits(0);
-                        settings.setDepthBits(16);
-                        settings.setStencilBits(0);
-                        break;
-                    case FASTEST:
-                    case LEGACY:
-                        settings.setBitsPerPixel(16);
-                        settings.setAlphaBits(0);
-                        settings.setDepthBits(16);
-                        settings.setStencilBits(0);
-                        break;
-                    case BEST_TRANSLUCENT:
-                        settings.setBitsPerPixel(24);
-                        settings.setAlphaBits(8);
-                        settings.setDepthBits(16);
-                        settings.setStencilBits(0);
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Invalid eglConfigType");
-                }
-                settings.setSamples(antiAliasingSamples);
-            }
+
+            settings.setBitsPerPixel(eglBitsPerPixel);
+            settings.setAlphaBits(eglAlphaBits);
+            settings.setDepthBits(eglDepthBits);
+            settings.setSamples(eglSamples);
+            settings.setStencilBits(eglStencilBits);
+            
             settings.setResolution(disp.getWidth(), disp.getHeight());
             settings.setAudioRenderer(audioRendererType);
-
 
             // Create application instance
             try {
@@ -456,8 +399,8 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
         }
         if (splashPicID != 0) {
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                    LayoutParams.FILL_PARENT,
-                    LayoutParams.FILL_PARENT,
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT,
                     Gravity.CENTER);
 
             frameLayout = new FrameLayout(this);
@@ -578,12 +521,9 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
 
         if (app != null) {
             //resume the audio
-            AudioRenderer result = app.getAudioRenderer();
-            if (result != null) {
-                if (result instanceof AndroidAudioRenderer) {
-                    AndroidAudioRenderer renderer = (AndroidAudioRenderer) result;
-                    renderer.resumeAll();
-                }
+            AudioRenderer audioRenderer = app.getAudioRenderer();
+            if (audioRenderer != null) {
+                audioRenderer.resumeAll();
             }
             //resume the sensors (aka joysticks)
             if (app.getContext() != null) {
@@ -616,13 +556,9 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
 
         if (app != null) {
             //pause the audio
-            AudioRenderer result = app.getAudioRenderer();
-            if (result != null) {
-                logger.log(Level.FINE, "pause: {0}", result.getClass().getSimpleName());
-                if (result instanceof AndroidAudioRenderer) {
-                    AndroidAudioRenderer renderer = (AndroidAudioRenderer) result;
-                    renderer.pauseAll();
-                }
+            AudioRenderer audioRenderer = app.getAudioRenderer();
+            if (audioRenderer != null) {
+                audioRenderer.pauseAll();
             }
             //pause the sensors (aka joysticks)
             if (app.getContext() != null) {

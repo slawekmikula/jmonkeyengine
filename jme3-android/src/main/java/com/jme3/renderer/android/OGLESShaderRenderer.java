@@ -36,8 +36,18 @@ import android.os.Build;
 import com.jme3.asset.AndroidImageInfo;
 import com.jme3.light.LightList;
 import com.jme3.material.RenderState;
-import com.jme3.math.*;
-import com.jme3.renderer.*;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.Matrix4f;
+import com.jme3.math.Quaternion;
+import com.jme3.math.Vector2f;
+import com.jme3.math.Vector3f;
+import com.jme3.math.Vector4f;
+import com.jme3.renderer.Caps;
+import com.jme3.renderer.IDList;
+import com.jme3.renderer.RenderContext;
+import com.jme3.renderer.Renderer;
+import com.jme3.renderer.RendererException;
+import com.jme3.renderer.Statistics;
 import com.jme3.renderer.android.TextureUtil.AndroidGLImageFormat;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Mesh.Mode;
@@ -58,7 +68,11 @@ import com.jme3.texture.Texture.WrapAxis;
 import com.jme3.util.BufferUtils;
 import com.jme3.util.ListMap;
 import com.jme3.util.NativeObjectManager;
-import java.nio.*;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.logging.Level;
@@ -128,7 +142,7 @@ public class OGLESShaderRenderer implements Renderer {
         return caps;
     }
 
-    private int extractVersion(String prefixStr, String versionStr) {
+    private static int extractVersion(String prefixStr, String versionStr) {
         if (versionStr != null) {
             int spaceIdx = versionStr.indexOf(" ", prefixStr.length());
             if (spaceIdx >= 1) {
@@ -136,10 +150,37 @@ public class OGLESShaderRenderer implements Renderer {
             } else {
                 versionStr = versionStr.substring(prefixStr.length()).trim();
             }
-            //some device have ":" at the end of the version.
-            versionStr = versionStr.replaceAll("\\:", "");
-            float version = Float.parseFloat(versionStr);
-            return (int) (version * 100);
+            
+            // Find a character which is not a period or digit.
+            for (int i = 0; i < versionStr.length(); i++) {
+                char c = versionStr.charAt(i);
+                if (c != '.' && (c < '0' || c > '9')) {
+                    versionStr = versionStr.substring(0, i);
+                    break;
+                }
+            }
+            
+            // Pivot on first point.
+            int firstPoint = versionStr.indexOf(".");
+            
+            // Remove everything after second point.
+            int secondPoint = versionStr.indexOf(".", firstPoint + 1);
+            
+            if (secondPoint != -1) {
+                versionStr = versionStr.substring(0, secondPoint);
+            }
+            
+            String majorVerStr = versionStr.substring(0, firstPoint);
+            String minorVerStr = versionStr.substring(firstPoint + 1);
+            
+            if (minorVerStr.endsWith("0") && minorVerStr.length() > 1) {
+                minorVerStr = minorVerStr.substring(0, minorVerStr.length() - 1);
+            }
+            
+            int majorVer = Integer.parseInt(majorVerStr);
+            int minorVer = Integer.parseInt(minorVerStr);
+            
+            return majorVer * 100 + minorVer * 10;
         } else {
             return -1;
         }
@@ -179,7 +220,7 @@ public class OGLESShaderRenderer implements Renderer {
         }
 
         // Check shader language version
-        glslVer = extractVersion("OpenGL ES GLSL ES ", GLES20.glGetString(GLES20.GL_SHADING_LANGUAGE_VERSION));
+        glslVer = extractVersion("OpenGL ES GLSL ", GLES20.glGetString(GLES20.GL_SHADING_LANGUAGE_VERSION));
         switch (glslVer) {
             // TODO: When new versions of OpenGL ES shader language come out,
             // update this.
@@ -674,21 +715,10 @@ public class OGLESShaderRenderer implements Renderer {
     }
 
     protected void updateUniform(Shader shader, Uniform uniform) {
-        int shaderId = shader.getId();
-
         assert uniform.getName() != null;
         assert shader.getId() > 0;
 
-        if (context.boundShaderProgram != shaderId) {
-            GLES20.glUseProgram(shaderId);
-            RendererUtil.checkGLError();
-
-            statistics.onShaderUse(shader, true);
-            boundShader = shader;
-            context.boundShaderProgram = shaderId;
-        } else {
-            statistics.onShaderUse(shader, false);
-        }
+        bindProgram(shader);
 
         int loc = uniform.getLocation();
         if (loc == -1) {
@@ -1283,7 +1313,7 @@ public class OGLESShaderRenderer implements Renderer {
                     + ":" + fb.getHeight() + " is not supported.");
         }
 
-        AndroidGLImageFormat imageFormat = TextureUtil.getImageFormat(rb.getFormat());
+        AndroidGLImageFormat imageFormat = TextureUtil.getImageFormat(rb.getFormat(), true);
         if (imageFormat.renderBufferStorageFormat == 0) {
             throw new RendererException("The format '" + rb.getFormat() + "' cannot be used for renderbuffers.");
         }
@@ -1313,8 +1343,10 @@ public class OGLESShaderRenderer implements Renderer {
 
     private int convertAttachmentSlot(int attachmentSlot) {
         // can also add support for stencil here
-        if (attachmentSlot == -100) {
+        if (attachmentSlot == FrameBuffer.SLOT_DEPTH) {
             return GLES20.GL_DEPTH_ATTACHMENT;
+//        if (attachmentSlot == FrameBuffer.SLOT_DEPTH_STENCIL) {
+//            return GLES30.GL_DEPTH_STENCIL_ATTACHMENT;
         } else if (attachmentSlot == 0) {
             return GLES20.GL_COLOR_ATTACHMENT0;
         } else {
