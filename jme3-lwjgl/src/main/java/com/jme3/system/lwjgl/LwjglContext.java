@@ -39,7 +39,19 @@ import com.jme3.renderer.Renderer;
 import com.jme3.renderer.RendererException;
 import com.jme3.renderer.lwjgl.LwjglGL;
 import com.jme3.renderer.lwjgl.LwjglGLExt;
+import com.jme3.renderer.lwjgl.LwjglGLFboEXT;
+import com.jme3.renderer.lwjgl.LwjglGLFboGL3;
+import com.jme3.renderer.opengl.GL;
+import com.jme3.renderer.opengl.GL2;
+import com.jme3.renderer.opengl.GL3;
+import com.jme3.renderer.opengl.GL4;
+import com.jme3.renderer.opengl.GLDebugDesktop;
+import com.jme3.renderer.opengl.GLExt;
+import com.jme3.renderer.opengl.GLFbo;
 import com.jme3.renderer.opengl.GLRenderer;
+import com.jme3.renderer.opengl.GLTiming;
+import com.jme3.renderer.opengl.GLTimingState;
+import com.jme3.renderer.opengl.GLTracer;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.system.JmeSystem;
@@ -60,6 +72,8 @@ public abstract class LwjglContext implements JmeContext {
 
     private static final Logger logger = Logger.getLogger(LwjglContext.class.getName());
 
+    protected static final String THREAD_NAME = "jME3 Main";
+    
     protected AtomicBoolean created = new AtomicBoolean(false);
     protected AtomicBoolean renderable = new AtomicBoolean(false);
     protected final Object createdLock = new Object();
@@ -77,25 +91,13 @@ public abstract class LwjglContext implements JmeContext {
     }
 
     protected void printContextInitInfo() {
-        logger.log(Level.INFO, "Lwjgl {0} context running on thread {1}",
-                new Object[]{Sys.getVersion(), Thread.currentThread().getName()});
-
-        logger.log(Level.INFO, "Adapter: {0}", Display.getAdapter());
-        logger.log(Level.INFO, "Driver Version: {0}", Display.getVersion());
-
-        String vendor = GL11.glGetString(GL11.GL_VENDOR);
-        logger.log(Level.INFO, "Vendor: {0}", vendor);
-
-        String version = GL11.glGetString(GL11.GL_VERSION);
-        logger.log(Level.INFO, "OpenGL Version: {0}", version);
-
-        String renderGl = GL11.glGetString(GL11.GL_RENDERER);
-        logger.log(Level.INFO, "Renderer: {0}", renderGl);
-
-        if (GLContext.getCapabilities().OpenGL20){
-            String shadingLang = GL11.glGetString(GL20.GL_SHADING_LANGUAGE_VERSION);
-            logger.log(Level.INFO, "GLSL Ver: {0}", shadingLang);
-        }
+        logger.log(Level.INFO, "LWJGL {0} context running on thread {1}\n" +
+                               " * Graphics Adapter: {2}\n" +
+                               " * Driver Version: {3}\n" +
+                               " * Scaling Factor: {4}",
+                               new Object[]{ Sys.getVersion(), Thread.currentThread().getName(), 
+                                             Display.getAdapter(), Display.getVersion(),
+                                             Display.getPixelScaleFactor() });
     }
 
     protected ContextAttribs createContextAttribs() {
@@ -206,13 +208,44 @@ public abstract class LwjglContext implements JmeContext {
         }
         
         if (settings.getRenderer().equals(AppSettings.LWJGL_OPENGL2)
-                || settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3)) {
-            LwjglGL gl = new LwjglGL();
-            LwjglGLExt glext = new LwjglGLExt();
-            renderer = new GLRenderer(gl, glext);
+         || settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3)) {
+            GL gl = new LwjglGL();
+            GLExt glext = new LwjglGLExt();
+            GLFbo glfbo;
+            
+            if (GLContext.getCapabilities().OpenGL30) {
+                glfbo = new LwjglGLFboGL3();
+            } else {
+                glfbo = new LwjglGLFboEXT();
+            }
+            
+            if (settings.getBoolean("GraphicsDebug")) {
+                gl    = new GLDebugDesktop(gl, glext, glfbo);
+                glext = (GLExt) gl;
+                glfbo = (GLFbo) gl;
+            }
+            
+            if (settings.getBoolean("GraphicsTiming")) {
+                GLTimingState timingState = new GLTimingState();
+                gl    = (GL) GLTiming.createGLTiming(gl, timingState, GL.class, GL2.class, GL3.class, GL4.class);
+                glext = (GLExt) GLTiming.createGLTiming(glext, timingState, GLExt.class);
+                glfbo = (GLFbo) GLTiming.createGLTiming(glfbo, timingState, GLFbo.class);
+            }
+                  
+            if (settings.getBoolean("GraphicsTrace")) {
+                gl    = (GL) GLTracer.createDesktopGlTracer(gl, GL.class, GL2.class, GL3.class, GL4.class);
+                glext = (GLExt) GLTracer.createDesktopGlTracer(glext, GLExt.class);
+                glfbo = (GLFbo) GLTracer.createDesktopGlTracer(glfbo, GLFbo.class);
+            }
+            
+            renderer = new GLRenderer(gl, glext, glfbo);
             renderer.initialize();
         } else {
             throw new UnsupportedOperationException("Unsupported renderer: " + settings.getRenderer());
+        }
+        
+        if (GLContext.getCapabilities().GL_ARB_debug_output && settings.getBoolean("GraphicsDebug")) {
+            ARBDebugOutput.glDebugMessageCallbackARB(new ARBDebugOutputCallback(new LwjglGLDebugOutputHandler()));
         }
         
         renderer.setMainFrameBufferSrgb(settings.getGammaCorrection());

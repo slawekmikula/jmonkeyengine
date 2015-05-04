@@ -488,7 +488,8 @@ public abstract class Texture implements CloneableSmartAsset, Savable, Cloneable
 
     /**
      * @return the anisotropic filtering level for this texture. Default value
-     * is 1 (no anisotrophy), 2 means x2, 4 is x4, etc.
+     * is 0 (use value from config), 
+     * 1 means 1x (no anisotrophy), 2 means x2, 4 is x4, etc.
      */
     public int getAnisotropicFilter() {
         return anisotropicFilter;
@@ -499,11 +500,7 @@ public abstract class Texture implements CloneableSmartAsset, Savable, Cloneable
      *            the anisotropic filtering level for this texture.
      */
     public void setAnisotropicFilter(int level) {
-        if (level < 1) {
-            anisotropicFilter = 1;
-        } else {
-            anisotropicFilter = level;
-        }
+        anisotropicFilter = Math.max(0, level);
     }
 
     @Override
@@ -620,7 +617,7 @@ public abstract class Texture implements CloneableSmartAsset, Savable, Cloneable
                 image = loadedTex.getImage();
             } catch (AssetNotFoundException ex){
                 Logger.getLogger(Texture.class.getName()).log(Level.SEVERE, "Cannot locate texture {0}", key);
-                image = PlaceholderAssets.getPlaceholderImage();
+                image = PlaceholderAssets.getPlaceholderImage(e.getAssetManager());
             }
         }else{
             // no key is set on the texture. Attempt to load an embedded image

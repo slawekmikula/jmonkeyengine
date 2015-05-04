@@ -11,16 +11,8 @@ subprojects {
     //    }
 }
 
-task run(dependsOn: ':jme3-examples:build', type: JavaExec) {
+task run(dependsOn: ':jme3-examples:run') {
     description = 'Run the jME3 examples'
-    main = 'jme3test.TestChooser'
-    classpath += files(subprojects.collect{project ->
-            project.sourceSets*.runtimeClasspath})
-//    classpath += files(subprojects.collect {project ->
-//            project.sourceSets*.output})
-//    classpath = sourceSets.main.runtimeClasspath
-//    args 'mrhaki'
-//    systemProperty 'simple.message', 'Hello '
 }
 
 defaultTasks 'run'
@@ -65,8 +57,7 @@ task createZipDistribution(type:Zip,dependsOn:["dist","libDist"], description:"P
         }            
         into("/sources") {
             from {"$buildDir/libDist/sources"}     
-        }   
-        println archiveName       
+        }
 }
 
 task copyLibs(type: Copy){
@@ -91,6 +82,7 @@ task mergedJavadoc(type: Javadoc, description: 'Creates Javadoc from all the pro
         options.addStringOption('Xdoclint:none', '-quiet')
     }
     
+    options.overview = file("javadoc-overview.html")
     // Note: The closures below are executed lazily.
     source subprojects.collect {project ->
         project.sourceSets*.allJava
@@ -173,3 +165,12 @@ ext {
 //        }
 //    }
 //}
+
+allprojects {
+    tasks.withType(JavaExec) {
+        enableAssertions = true // false by default
+    }
+    tasks.withType(Test) {
+        enableAssertions = true // true by default
+    }
+}

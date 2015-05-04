@@ -51,6 +51,7 @@ import org.openide.explorer.view.BeanTreeView;
 import org.openide.nodes.Node;
 import org.openide.util.HelpCtx;
 import org.openide.util.NbBundle;
+import org.openide.util.actions.SystemAction;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 
@@ -67,7 +68,7 @@ persistenceType = TopComponent.PERSISTENCE_ALWAYS)
 @ActionReference(path = "Menu/Window" /*, position = 333 */)
 @TopComponent.OpenActionRegistration(displayName = "#CTL_FilterExplorerAction",
 preferredID = "FilterExplorerTopComponent")
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public final class FilterExplorerTopComponent extends TopComponent implements ExplorerManager.Provider {
 
     private static final Logger logger = Logger.getLogger(FilterExplorerTopComponent.class.getName());
@@ -84,8 +85,8 @@ public final class FilterExplorerTopComponent extends TopComponent implements Ex
         setToolTipText(NbBundle.getMessage(FilterExplorerTopComponent.class, "HINT_FilterExplorerTopComponent"));
         ActionMap map = getActionMap();
         map.put("delete", ExplorerUtils.actionDelete(explorerManager, true));
-        map.put("moveup", new MoveUpAction());
-        map.put("movedown", new MoveDownAction());
+        map.put("moveup", SystemAction.get(MoveUpAction.class));
+        map.put("movedown", SystemAction.get(MoveDownAction.class));
         associateLookup(ExplorerUtils.createLookup(explorerManager, map));
 
     }

@@ -53,11 +53,11 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
     protected DisplayMode getFullscreenDisplayMode(int width, int height, int bpp, int freq){
         try {
             DisplayMode[] modes = Display.getAvailableDisplayModes();
-            for (DisplayMode mode : modes){
+            for (DisplayMode mode : modes) {
                 if (mode.getWidth() == width
-                 && mode.getHeight() == height
-                 && (mode.getBitsPerPixel() == bpp || (bpp==24&&mode.getBitsPerPixel()==32))
-                 && mode.getFrequency() == freq){
+                        && mode.getHeight() == height
+                        && (mode.getBitsPerPixel() == bpp || (bpp == 24 && mode.getBitsPerPixel() == 32))
+                        && (mode.getFrequency() == freq || (freq == 60 && mode.getFrequency() == 59))) {
                     return mode;
                 }
             }
@@ -94,6 +94,7 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
                                          settings.useStereo3D());
         
         frameRate = settings.getFrameRate();
+        allowSwapBuffers = settings.isSwapBuffers();
         logger.log(Level.FINE, "Selected display mode: {0}", displayMode);
 
         boolean pixelFormatChanged = false;
@@ -108,6 +109,7 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
         pixelFormat = pf;
         
         Display.setTitle(settings.getTitle());
+        Display.setResizable(settings.isResizable());
         
         if (displayMode != null) {
             if (settings.isFullscreen()) {
@@ -164,7 +166,7 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
             return;
         }
 
-        new Thread(this, "LWJGL Renderer Thread").start();
+        new Thread(this, THREAD_NAME).start();
         if (waitFor)
             waitFor(true);
     }
@@ -172,14 +174,19 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
     @Override
     public void runLoop(){
         // This method is overriden to do restart
-        if (needRestart.getAndSet(false)){
-            try{
+        if (needRestart.getAndSet(false)) {
+            try {
                 createContext(settings);
-            }catch (LWJGLException ex){
+            } catch (LWJGLException ex) {
                 logger.log(Level.SEVERE, "Failed to set display settings!", ex);
             }
             listener.reshape(settings.getWidth(), settings.getHeight());
             logger.fine("Display restarted.");
+        } else if (Display.wasResized()) {
+            int newWidth = Display.getWidth();
+            int newHeight = Display.getHeight();
+            settings.setResolution(newWidth, newHeight);
+            listener.reshape(newWidth, newHeight);
         }
 
         super.runLoop();

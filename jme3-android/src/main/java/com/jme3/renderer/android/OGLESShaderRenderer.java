@@ -37,7 +37,6 @@ import com.jme3.asset.AndroidImageInfo;
 import com.jme3.light.LightList;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Matrix4f;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
@@ -49,6 +48,7 @@ import com.jme3.renderer.Renderer;
 import com.jme3.renderer.RendererException;
 import com.jme3.renderer.Statistics;
 import com.jme3.renderer.android.TextureUtil.AndroidGLImageFormat;
+import com.jme3.renderer.opengl.GLRenderer;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Mesh.Mode;
 import com.jme3.scene.VertexBuffer;
@@ -81,6 +81,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jme3tools.shader.ShaderDebug;
 
+/**
+ * @deprecated Should not be used anymore. Use {@link GLRenderer} instead.
+ */
+@Deprecated
 public class OGLESShaderRenderer implements Renderer {
 
     private static final Logger logger = Logger.getLogger(OGLESShaderRenderer.class.getName());
@@ -643,16 +647,10 @@ public class OGLESShaderRenderer implements Renderer {
         }
     }
 
-    public void onFrame() {
+    public void postFrame() {
         RendererUtil.checkGLErrorForced();
 
         objManager.deleteUnused(this);
-    }
-
-    public void setWorldMatrix(Matrix4f worldMatrix) {
-    }
-
-    public void setViewProjectionMatrices(Matrix4f viewMatrix, Matrix4f projMatrix) {
     }
 
     /*********************************************************************\
@@ -912,7 +910,7 @@ public class OGLESShaderRenderer implements Renderer {
             source.clearUpdateNeeded();
         } else {
            logger.log(Level.WARNING, "Bad compile of:\n{0}",
-                    new Object[]{ShaderDebug.formatShaderSource(source.getDefines(), source.getSource(),stringBuf.toString())});
+                    new Object[]{ShaderDebug.formatShaderSource(stringBuf.toString() + source.getDefines() + source.getSource())});
             if (infoLog != null) {
                 throw new RendererException("compile error in: " + source + "\n" + infoLog);
             } else {
@@ -1072,9 +1070,6 @@ public class OGLESShaderRenderer implements Renderer {
     /*********************************************************************\
     |* Framebuffers                                                      *|
     \*********************************************************************/
-    public void copyFrameBuffer(FrameBuffer src, FrameBuffer dst) {
-        copyFrameBuffer(src, dst, true);
-    }
 
     public void copyFrameBuffer(FrameBuffer src, FrameBuffer dst, boolean copyDepth) {
             throw new RendererException("Copy framebuffer not implemented yet.");
@@ -1855,21 +1850,6 @@ public class OGLESShaderRenderer implements Renderer {
       TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType()), 0, x, y);
     }
 
-    public void clearTextureUnits() {
-        IDList textureList = context.textureIndexList;
-        Image[] textures = context.boundTextures;
-        for (int i = 0; i < textureList.oldLen; i++) {
-            int idx = textureList.oldList[i];
-//            if (context.boundTextureUnit != idx){
-//                glActiveTexture(GL_TEXTURE0 + idx);
-//                context.boundTextureUnit = idx;
-//            }
-//            glDisable(convertTextureType(textures[idx].getType()));
-            textures[idx] = null;
-        }
-        context.textureIndexList.copyNewToOld();
-    }
-
     public void deleteImage(Image image) {
         int texId = image.getId();
         if (texId != -1) {
@@ -2112,12 +2092,12 @@ public class OGLESShaderRenderer implements Renderer {
 
                 vb.getData().rewind();
 
-                Android22Workaround.glVertexAttribPointer(loc,
-                                    vb.getNumComponents(),
-                                    convertVertexBufferFormat(vb.getFormat()),
-                                    vb.isNormalized(),
-                                    vb.getStride(),
-                                    0);
+                GLES20.glVertexAttribPointer(loc,
+                                     vb.getNumComponents(),
+                                     convertVertexBufferFormat(vb.getFormat()),
+                                     vb.isNormalized(),
+                                     vb.getStride(),
+                                     0);
 
                 RendererUtil.checkGLError();
 
@@ -2344,7 +2324,6 @@ public class OGLESShaderRenderer implements Renderer {
             RendererUtil.checkGLError();
         }
         clearVertexAttribs();
-        clearTextureUnits();
     }
 
     private void renderMeshDefault(Mesh mesh, int lod, int count) {
@@ -2383,7 +2362,6 @@ public class OGLESShaderRenderer implements Renderer {
             RendererUtil.checkGLError();
         }
         clearVertexAttribs();
-        clearTextureUnits();
     }
 
     public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
@@ -2563,5 +2541,9 @@ public class OGLESShaderRenderer implements Renderer {
 
     public void setLinearizeSrgbImages(boolean linearize) {
         //TODO once opglES3.0 is supported maybe....
+    }
+
+    public void readFrameBufferWithFormat(FrameBuffer fb, ByteBuffer byteBuf, Image.Format format) {
+        throw new UnsupportedOperationException("Not supported yet. URA will make that work seamlessly");
     }
 }

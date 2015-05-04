@@ -12,7 +12,6 @@ import com.jme3.gde.materials.EditableMaterialFile;
 import com.jme3.gde.materials.MaterialProperty;
 import com.jme3.gde.core.sceneexplorer.MaterialChangeListener;
 import com.jme3.gde.core.sceneexplorer.MaterialChangeProvider;
-import com.jme3.gde.core.sceneviewer.SceneViewerTopComponent;
 import com.jme3.gde.materials.multiview.widgets.MaterialPropertyWidget;
 import com.jme3.gde.materials.multiview.widgets.MaterialWidgetListener;
 import com.jme3.gde.materials.multiview.widgets.WidgetFactory;
@@ -23,13 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.logging.Logger;
-import javax.swing.JComponent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import org.openide.loaders.DataObjectNotFoundException;
@@ -47,13 +43,13 @@ import org.openide.util.HelpCtx;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.InstanceContent;
 import org.openide.windows.CloneableTopComponent;
-import org.openide.windows.Mode;
 
 /**
  * Top component which displays something.
  */
 @ConvertAsProperties(dtd = "-//com.jme3.gde.materials.multiview//MaterialEditor//EN",
 autostore = false)
+@SuppressWarnings({"unchecked", "rawtypes"})
 public final class MaterialEditorTopComponent extends CloneableTopComponent implements MaterialWidgetListener, MaterialChangeProvider {
 
     private static MaterialEditorTopComponent instance;
@@ -68,10 +64,10 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
     private String materialFileName;
     private String relativeMaterialFileName;
     private ProjectAssetManager manager;
-    private SaveCookie saveCookie = new SaveCookieImpl();
+    private final SaveCookie saveCookie = new SaveCookieImpl();
     private boolean saveImmediate = true;
     private boolean updateProperties = false;
-    private List<MaterialChangeListener> materialListeners = new ArrayList<MaterialChangeListener>();
+    private final List<MaterialChangeListener> materialListeners = new ArrayList<MaterialChangeListener>();
 
     public MaterialEditorTopComponent() {
     }
@@ -151,62 +147,49 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
             .addGap(0, 100, Short.MAX_VALUE)
         );
 
-        setBackground(new java.awt.Color(204, 204, 204));
-
-        jTabbedPane1.setBackground(new java.awt.Color(204, 204, 204));
         jTabbedPane1.setMinimumSize(new java.awt.Dimension(0, 0));
         jTabbedPane1.setPreferredSize(new java.awt.Dimension(0, 0));
 
-        jPanel4.setBackground(new java.awt.Color(204, 204, 204));
         jPanel4.setPreferredSize(new java.awt.Dimension(0, 0));
 
-        jScrollPane3.setBackground(new java.awt.Color(204, 204, 204));
         jScrollPane3.setBorder(null);
         jScrollPane3.setMinimumSize(new java.awt.Dimension(0, 0));
 
-        texturePanel.setBackground(new java.awt.Color(204, 204, 204));
         texturePanel.setLayout(new javax.swing.BoxLayout(texturePanel, javax.swing.BoxLayout.PAGE_AXIS));
         jScrollPane3.setViewportView(texturePanel);
 
         jTabbedPane2.addTab(org.openide.util.NbBundle.getMessage(MaterialEditorTopComponent.class, "MaterialEditorTopComponent.jScrollPane3.TabConstraints.tabTitle"), jScrollPane3); // NOI18N
 
-        jScrollPane9.setBackground(new java.awt.Color(204, 204, 204));
         jScrollPane9.setBorder(null);
 
-        statesPanel.setBackground(new java.awt.Color(204, 204, 204));
         statesPanel.setLayout(new javax.swing.BoxLayout(statesPanel, javax.swing.BoxLayout.PAGE_AXIS));
         jScrollPane9.setViewportView(statesPanel);
 
         jTabbedPane2.addTab(org.openide.util.NbBundle.getMessage(MaterialEditorTopComponent.class, "MaterialEditorTopComponent.jScrollPane9.TabConstraints.tabTitle"), jScrollPane9); // NOI18N
 
-        jScrollPane2.setBackground(new java.awt.Color(204, 204, 204));
         jScrollPane2.setBorder(null);
         jScrollPane2.setMinimumSize(new java.awt.Dimension(220, 0));
 
-        optionsPanel.setBackground(new java.awt.Color(204, 204, 204));
         optionsPanel.setLayout(new javax.swing.BoxLayout(optionsPanel, javax.swing.BoxLayout.PAGE_AXIS));
         jScrollPane2.setViewportView(optionsPanel);
 
         jTabbedPane3.addTab(org.openide.util.NbBundle.getMessage(MaterialEditorTopComponent.class, "MaterialEditorTopComponent.jScrollPane2.TabConstraints.tabTitle_1"), jScrollPane2); // NOI18N
 
-        jToolBar2.setBackground(new java.awt.Color(204, 204, 204));
         jToolBar2.setFloatable(false);
         jToolBar2.setRollover(true);
 
         org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(MaterialEditorTopComponent.class, "MaterialEditorTopComponent.jLabel1.text")); // NOI18N
         jToolBar2.add(jLabel1);
 
-        jPanel3.setBackground(new java.awt.Color(204, 204, 204));
-
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 276, Short.MAX_VALUE)
+            .addGap(0, 131, Short.MAX_VALUE)
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 23, Short.MAX_VALUE)
+            .addGap(0, 21, Short.MAX_VALUE)
         );
 
         jToolBar2.add(jPanel3);
@@ -221,14 +204,11 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
         });
         jToolBar2.add(jComboBox1);
 
-        jToolBar3.setBackground(new java.awt.Color(204, 204, 204));
         jToolBar3.setFloatable(false);
         jToolBar3.setRollover(true);
 
         org.openide.awt.Mnemonics.setLocalizedText(jLabel3, org.openide.util.NbBundle.getMessage(MaterialEditorTopComponent.class, "MaterialEditorTopComponent.jLabel3.text")); // NOI18N
         jToolBar3.add(jLabel3);
-
-        jPanel1.setBackground(new java.awt.Color(204, 204, 204));
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -238,7 +218,7 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 23, Short.MAX_VALUE)
+            .addGap(0, 21, Short.MAX_VALUE)
         );
 
         jToolBar3.add(jPanel1);
@@ -267,15 +247,15 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
                 .addComponent(materialPreviewWidget1, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(32, 32, 32)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jToolBar3, javax.swing.GroupLayout.DEFAULT_SIZE, 612, Short.MAX_VALUE)
-                    .addComponent(jToolBar2, javax.swing.GroupLayout.DEFAULT_SIZE, 612, Short.MAX_VALUE)
+                    .addComponent(jToolBar3, javax.swing.GroupLayout.DEFAULT_SIZE, 596, Short.MAX_VALUE)
+                    .addComponent(jToolBar2, javax.swing.GroupLayout.DEFAULT_SIZE, 596, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
                         .addComponent(jCheckBox1)
                         .addContainerGap())))
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addComponent(jTabbedPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 223, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jTabbedPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 535, Short.MAX_VALUE))
+                .addComponent(jTabbedPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 525, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -291,8 +271,8 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
                     .addComponent(materialPreviewWidget1, javax.swing.GroupLayout.PREFERRED_SIZE, 152, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jTabbedPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 338, Short.MAX_VALUE)
-                    .addComponent(jTabbedPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 338, Short.MAX_VALUE)))
+                    .addComponent(jTabbedPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 320, Short.MAX_VALUE)
+                    .addComponent(jTabbedPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 326, Short.MAX_VALUE)))
         );
 
         jTabbedPane1.addTab(org.openide.util.NbBundle.getMessage(MaterialEditorTopComponent.class, "MaterialEditorTopComponent.jPanel4.TabConstraints.tabTitle"), jPanel4); // NOI18N
@@ -521,7 +501,9 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
             String text = jTextArea1.getText();
             materialFile.setAsText(text);
             dataObject.setModified(false);
-            materialPreviewWidget1.showMaterial(manager, materialFileName);
+            if( ! text.trim().equals("")){
+                materialPreviewWidget1.showMaterial(manager, materialFileName);
+            }
         }
     }
 
@@ -533,8 +515,7 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
         List<String> matDefList = Arrays.asList(matDefs);
         Collections.sort(matDefList);
         String[] sortedMatDefs = matDefList.toArray(new String[0]);
-        for (int i = 0; i < sortedMatDefs.length; i++) {
-            String string = sortedMatDefs[i];
+        for (String string : sortedMatDefs) {
             jComboBox1.addItem(string);
         }
 
@@ -551,14 +532,12 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
     }
 
     private void updateProperties() {
-        for (int i = 0; i < optionsPanel.getComponents().length; i++) {
-            Component component = optionsPanel.getComponents()[i];
+        for (Component component : optionsPanel.getComponents()) {
             if (component instanceof MaterialPropertyWidget) {
                 ((MaterialPropertyWidget) component).registerChangeListener(null);
             }
         }
-        for (int i = 0; i < texturePanel.getComponents().length; i++) {
-            Component component = texturePanel.getComponents()[i];
+        for (Component component : texturePanel.getComponents()) {
             if (component instanceof MaterialPropertyWidget) {
                 ((MaterialPropertyWidget) component).registerChangeListener(null);
             }
@@ -570,13 +549,12 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
         List<Component> valueList = new LinkedList<Component>();
         List<Component> textureList = new LinkedList<Component>();
         List<Component> otherList = new LinkedList<Component>();
-        for (Iterator<Entry<String, MaterialProperty>> it = materialFile.getParameterMap().entrySet().iterator(); it.hasNext();) {
-            Entry<String, MaterialProperty> entry = it.next();
+        for (Entry<String, MaterialProperty> entry : materialFile.getParameterMap().entrySet()) {
             MaterialPropertyWidget widget = WidgetFactory.getWidget(entry.getValue(), manager);
             widget.registerChangeListener(this);
             if ("Boolean".equals(entry.getValue().getType())) {
                 optionList.add(widget);
-            } else if (entry.getValue().getType().indexOf("Texture") >= 0) {
+            } else if (entry.getValue().getType().contains("Texture")) {
                 textureList.add(widget);
             } else if ("Color".equals(entry.getValue().getType())) {
                 colorList.add(widget);
@@ -588,24 +566,19 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
                 otherList.add(widget);
             }
         }
-        for (Iterator<Component> it = textureList.iterator(); it.hasNext();) {
-            Component component = it.next();
+        for (Component component : textureList) {
             texturePanel.add(component);
         }
-        for (Iterator<Component> it = optionList.iterator(); it.hasNext();) {
-            Component component = it.next();
+        for (Component component : optionList) {
             optionsPanel.add(component);
         }
-        for (Iterator<Component> it = colorList.iterator(); it.hasNext();) {
-            Component component = it.next();
+        for (Component component : colorList) {
             texturePanel.add(component);
         }
-        for (Iterator<Component> it = valueList.iterator(); it.hasNext();) {
-            Component component = it.next();
+        for (Component component : valueList) {
             optionsPanel.add(component);
         }
-        for (Iterator<Component> it = otherList.iterator(); it.hasNext();) {
-            Component component = it.next();
+        for (Component component : otherList) {
             optionsPanel.add(component);
         }
         jScrollPane2.repaint();
@@ -619,15 +592,13 @@ public final class MaterialEditorTopComponent extends CloneableTopComponent impl
     }
 
     private void updateStates() {
-        for (int i = 0; i < statesPanel.getComponents().length; i++) {
-            Component component = statesPanel.getComponents()[i];
+        for (Component component : statesPanel.getComponents()) {
             if (component instanceof MaterialPropertyWidget) {
                 ((MaterialPropertyWidget) component).registerChangeListener(null);
             }
         }
         statesPanel.removeAll();
-        for (Iterator<Entry<String, MaterialProperty>> it = materialFile.getStateMap().entrySet().iterator(); it.hasNext();) {
-            Entry<String, MaterialProperty> entry = it.next();
+        for (Entry<String, MaterialProperty> entry : materialFile.getStateMap().entrySet()) {
             MaterialPropertyWidget widget = WidgetFactory.getWidget(entry.getValue(), manager);
             widget.registerChangeListener(this);
             statesPanel.add(widget);

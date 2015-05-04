@@ -84,8 +84,13 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import org.lwjgl.opengl.GL30;
 
-
-public class LwjglRenderer implements Renderer {
+/**
+ * 
+ * Should not be used, has been replaced by Unified Rendering Architechture.
+ * @deprecated
+ */
+@Deprecated 
+public class LwjglRenderer  {
 
     private static final Logger logger = Logger.getLogger(LwjglRenderer.class.getName());
     private static final boolean VALIDATE_SHADER = false;
@@ -135,12 +140,12 @@ public class LwjglRenderer implements Renderer {
         nameBuf.rewind();
     }
 
-    @Override
+//    @Override
     public Statistics getStatistics() {
         return statistics;
     }
 
-    @Override
+ //   @Override
     public EnumSet<Caps> getCaps() {
         return caps;
     }
@@ -419,11 +424,13 @@ public class LwjglRenderer implements Renderer {
                 logger.log(Level.FINER, "Texture Multisample Depth Samples: {0}", maxDepthTexSamples);
             }
 
-            glGetInteger(GL_MAX_DRAW_BUFFERS, intBuf16);
-            maxMRTFBOAttachs = intBuf16.get(0);
-            if (maxMRTFBOAttachs > 1) {
-                caps.add(Caps.FrameBufferMRT);
-                logger.log(Level.FINER, "FBO Max MRT renderbuffers: {0}", maxMRTFBOAttachs);
+            if (hasExtension("GL_ARB_draw_buffers")) {
+                glGetInteger(GL_MAX_DRAW_BUFFERS, intBuf16);
+                maxMRTFBOAttachs = intBuf16.get(0);
+                if (maxMRTFBOAttachs > 1) {
+                    caps.add(Caps.FrameBufferMRT);
+                    logger.log(Level.FINER, "FBO Max MRT renderbuffers: {0}", maxMRTFBOAttachs);
+                }
             }
         }
 
@@ -827,7 +834,7 @@ public class LwjglRenderer implements Renderer {
         }
     }
 
-    public void onFrame() {
+    public void postFrame() {
         objManager.deleteUnused(this);
 //        statistics.clearFrame();
     }
@@ -1087,7 +1094,7 @@ public class LwjglRenderer implements Renderer {
             source.clearUpdateNeeded();
         } else {
             logger.log(Level.WARNING, "Bad compile of:\n{0}",
-                    new Object[]{ShaderDebug.formatShaderSource(source.getDefines(), source.getSource(), stringBuf.toString())});
+                    new Object[]{ShaderDebug.formatShaderSource(stringBuf.toString() + source.getDefines() + source.getSource())});
             if (infoLog != null) {
                 throw new RendererException("compile error in: " + source + "\n" + infoLog);
             } else {
@@ -1940,7 +1947,7 @@ public class LwjglRenderer implements Renderer {
             // Image does not have mipmaps, but they are required.
             // Generate from base level.
 
-            if (!caps.contains(Caps.OpenGL30)) {
+            if (!caps.contains(Caps.OpenGL30) && !caps.contains(Caps.OpenGLES20)) {
                 glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
                 img.setMipmapsGenerated(true);
             } else {

@@ -31,10 +31,8 @@
  */
 package com.jme3.renderer;
 
-import com.jme3.light.LightList;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Matrix4f;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.shader.Shader;
@@ -55,6 +53,11 @@ import java.util.EnumSet;
  */
 public interface Renderer {
 
+    /**
+     * Detects available capabilities of the GPU. 
+     * 
+     * Must be called prior to any other Renderer methods.
+     */
     public void initialize();
     
     /**
@@ -112,25 +115,11 @@ public interface Renderer {
 
     /**
      * Called when a new frame has been rendered.
-     */
-    public void onFrame();
-
-    /**
-     * Set the world matrix to use. Does nothing if the Renderer is 
-     * shader based.
      * 
-     * @param worldMatrix World matrix to use.
+     * Currently, this will simply delete any OpenGL objects from the GPU
+     * which have been garbage collected by the GC.
      */
-    public void setWorldMatrix(Matrix4f worldMatrix);
-
-    /**
-     * Sets the view and projection matrices to use. Does nothing if the Renderer 
-     * is shader based.
-     * 
-     * @param viewMatrix The view matrix to use.
-     * @param projMatrix The projection matrix to use.
-     */
-    public void setViewProjectionMatrices(Matrix4f viewMatrix, Matrix4f projMatrix);
+    public void postFrame();
 
     /**
      * Set the viewport location and resolution on the screen.
@@ -161,16 +150,6 @@ public interface Renderer {
     public void clearClipRect();
 
     /**
-     * Set lighting state.
-     * Does nothing if the renderer is shader based.
-     * The lights should be provided in world space. 
-     * Specify <code>null</code> to disable lighting.
-     * 
-     * @param lights The light list to set.
-     */
-    public void setLighting(LightList lights);
-
-    /**
      * Sets the shader to use for rendering.
      * If the shader has not been uploaded yet, it is compiled
      * and linked. If it has been uploaded, then the 
@@ -185,6 +164,7 @@ public interface Renderer {
      * the attached shader sources.
      * 
      * @param shader Shader to delete.
+     * @see #deleteShaderSource(com.jme3.shader.Shader.ShaderSource) 
      */
     public void deleteShader(Shader shader);
 
@@ -197,17 +177,17 @@ public interface Renderer {
 
     /**
      * Copies contents from src to dst, scaling if necessary.
-     */
-    public void copyFrameBuffer(FrameBuffer src, FrameBuffer dst);
-
-    /**
-     * Copies contents from src to dst, scaling if necessary.
      * set copyDepth to false to only copy the color buffers.
      */
     public void copyFrameBuffer(FrameBuffer src, FrameBuffer dst, boolean copyDepth);
 
     /**
      * Sets the framebuffer that will be drawn to.
+     * 
+     * If the framebuffer has not been initialized yet, it will be created
+     * and its render surfaces and attached textures will be allocated.
+     * 
+     * @param fb The framebuffer to set
      */
     public void setFrameBuffer(FrameBuffer fb);
     
@@ -215,14 +195,14 @@ public interface Renderer {
      * Set the framebuffer that will be set instead of the main framebuffer
      * when a call to setFrameBuffer(null) is made.
      * 
-     * @param fb 
+     * @param fb The framebuffer to override the main framebuffer.
      */
     public void setMainFrameBufferOverride(FrameBuffer fb);
 
     /**
      * Reads the pixels currently stored in the specified framebuffer
      * into the given ByteBuffer object. 
-     * Only color pixels are transferred, the format is BGRA with 8 bits 
+     * Only color pixels are transferred, the format is RGBA with 8 bits 
      * per component. The given byte buffer should have at least
      * fb.getWidth() * fb.getHeight() * 4 bytes remaining.
      * 
@@ -230,6 +210,19 @@ public interface Renderer {
      * @param byteBuf The bytebuffer to transfer color data to
      */
     public void readFrameBuffer(FrameBuffer fb, ByteBuffer byteBuf);
+    
+    /**
+     * Reads the pixels currently stored in the specified framebuffer
+     * into the given ByteBuffer object. 
+     * Only color pixels are transferred, witht hte given format. 
+     * The given byte buffer should have at least
+     * fb.getWidth() * fb.getHeight() * 4 bytes remaining.
+     * 
+     * @param fb The framebuffer to read from
+     * @param byteBuf The bytebuffer to transfer color data to
+     * @param format the image format to use when reading the frameBuffer.
+     */
+    public void readFrameBufferWithFormat(FrameBuffer fb, ByteBuffer byteBuf, Image.Format format);
 
     /**
      * Deletes a framebuffer and all attached renderbuffers
@@ -242,7 +235,10 @@ public interface Renderer {
     public void setTexture(int unit, Texture tex);
 
     /**
-     * Modify the given Texture tex with the given Image. The image will be put at x and y into the texture.
+     * Modify the given Texture with the given Image. 
+     * The image will be put at x and y into the texture.
+     * 
+     * NOTE: this is only supported for uncompressed 2D images without mipmaps.
      *
      * @param tex the Texture that will be modified
      * @param pixels the source Image data to copy data from

@@ -178,13 +178,14 @@ public final class SceneViewerTopComponent extends TopComponent {
         });
         jToolBar1.add(enableCamLight);
 
-        enablePostFilterEffects.setIcon(IconList.eyeOpen);
-        org.openide.awt.Mnemonics.setLocalizedText(enablePostFilterEffects, org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.enablePostFilterEffects.text")); // NOI18N
-        enablePostFilterEffects.setToolTipText(org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.enablePostFilterEffects.toolTipText")); // NOI18N
-        enablePostFilterEffects.setFocusable(false);
-        enablePostFilterEffects.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        enablePostFilterEffects.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        enablePostFilterEffects.addActionListener(new java.awt.event.ActionListener() {
+        jToggleButton1.setIcon(IconList.eyeOff);
+        org.openide.awt.Mnemonics.setLocalizedText(jToggleButton1, org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.jToggleButton1.text")); // NOI18N
+        jToggleButton1.setToolTipText(org.openide.util.NbBundle.getMessage(SceneViewerTopComponent.class, "SceneViewerTopComponent.jToggleButton1.toolTipText")); // NOI18N
+        jToggleButton1.setFocusable(false);
+        jToggleButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jToggleButton1.setSelectedIcon(IconList.eyeGreen);
+        jToggleButton1.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jToggleButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 enablePostFilterEffectsActionPerformed(evt);
             }

@@ -42,7 +42,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * <codeWeakRefCloneAssetCache</code> caches cloneable assets in a weak-key
+ * <code>WeakRefCloneAssetCache</code> caches cloneable assets in a weak-key
  * cache, allowing them to be collected when memory is low.
  * The cache stores weak references to the asset keys, so that
  * when all clones of the original asset are collected, will cause the 
@@ -155,11 +155,7 @@ public class WeakRefCloneAssetCache implements AssetCache {
     }
 
     public <T> T getFromCache(AssetKey<T> key) {
-        AssetRef smartInfo;
-        synchronized (smartCache){
-            smartInfo = smartCache.get(key);
-        }
-        
+        AssetRef smartInfo = smartCache.get(key);
         if (smartInfo == null) {
             return null;
         } else {

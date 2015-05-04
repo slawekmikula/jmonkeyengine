@@ -82,7 +82,7 @@ public class SkeletonControl extends AbstractControl implements Cloneable {
     /**
      * User wishes to use hardware skinning if available.
      */
-    private transient boolean hwSkinningDesired = false;
+    private transient boolean hwSkinningDesired = true;
     
     /**
      * Hardware skinning is currently being used.
@@ -205,57 +205,19 @@ public class SkeletonControl extends AbstractControl implements Cloneable {
         this.skeleton = skeleton;
     }
 
-    /**
-     * Creates a skeleton control.
-     *
-     * @param targets the meshes controlled by the skeleton
-     * @param skeleton the skeleton
-     */
-    @Deprecated
-    SkeletonControl(Mesh[] targets, Skeleton skeleton) {
-        this.skeleton = skeleton;
-        this.targets = new SafeArrayList<Mesh>(Mesh.class, Arrays.asList(targets));
-    }
-
-
     private void findTargets(Node node) {
-        Mesh sharedMesh = null;        
-
         for (Spatial child : node.getChildren()) {
             if (child instanceof Geometry) {
                 Geometry geom = (Geometry) child;
-
-                // is this geometry using a shared mesh?
-                Mesh childSharedMesh = geom.getUserData(UserData.JME_SHAREDMESH);
-
-                if (childSharedMesh != null) {
-                    // Don’t bother with non-animated shared meshes
-                    if (childSharedMesh.isAnimated()) {
-                        // child is using shared mesh,
-                        // so animate the shared mesh but ignore child
-                        if (sharedMesh == null) {
-                            sharedMesh = childSharedMesh;
-                        } else if (sharedMesh != childSharedMesh) {
-                            throw new IllegalStateException("Two conflicting shared meshes for " + node);
-                        }
-                        materials.add(geom.getMaterial());
-                    }
-                } else {
-                    Mesh mesh = geom.getMesh();
-                    if (mesh.isAnimated()) {
-                        targets.add(mesh);
-                        materials.add(geom.getMaterial());
-                    }
+                Mesh mesh = geom.getMesh();
+                if (mesh.isAnimated()) {
+                    targets.add(mesh);
+                    materials.add(geom.getMaterial());
                 }
             } else if (child instanceof Node) {
                 findTargets((Node) child);
             }
         }
-
-        if (sharedMesh != null) {
-            targets.add(sharedMesh);
-        }
-
     }
 
     @Override
@@ -276,7 +238,7 @@ public class SkeletonControl extends AbstractControl implements Cloneable {
             softwareSkinUpdate(mesh, offsetMatrices);
         }     
     }
-
+    
     private void controlRenderHardware() {
         offsetMatrices = skeleton.computeSkinningMatrices();
         for (Material m : materials) {
@@ -384,10 +346,23 @@ public class SkeletonControl extends AbstractControl implements Cloneable {
     }
 
     public Control cloneForSpatial(Spatial spatial) {
-        Node clonedNode = (Node) spatial;                
+        Node clonedNode = (Node) spatial;
         SkeletonControl clone = new SkeletonControl();
+
+        AnimControl ctrl = spatial.getControl(AnimControl.class);
+        if (ctrl != null) {
+            // AnimControl is responsible for cloning the skeleton, not
+            // SkeletonControl.
+            clone.skeleton = ctrl.getSkeleton();
+        } else {
+            // If there's no AnimControl, create the clone ourselves.
+            clone.skeleton = new Skeleton(skeleton);
+        }
+        clone.hwSkinningDesired = this.hwSkinningDesired;
+        clone.hwSkinningEnabled = this.hwSkinningEnabled;
+        clone.hwSkinningSupported = this.hwSkinningSupported;
+        clone.hwSkinningTested = this.hwSkinningTested;
         
-        clone.skeleton = skeleton;
         clone.setSpatial(clonedNode);
 
         // Fix attachments for the cloned node

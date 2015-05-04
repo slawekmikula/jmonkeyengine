@@ -30,10 +30,13 @@ public class BoneContext {
     private static final Logger        LOGGER  = Logger.getLogger(BoneContext.class.getName());
     
     // the flags of the bone
-    public static final int      SELECTED                            = 0x0001;
-    public static final int      CONNECTED_TO_PARENT                 = 0x0010;
-    public static final int      DEFORM                              = 0x1000;
-
+    public static final int      SELECTED                            = 0x000001;
+    public static final int      CONNECTED_TO_PARENT                 = 0x000010;
+    public static final int      DEFORM                              = 0x001000;
+    public static final int      NO_LOCAL_LOCATION                   = 0x400000;
+    public static final int      NO_INHERIT_SCALE                    = 0x008000;
+    public static final int      NO_INHERIT_ROTATION                 = 0x000200;
+    
     /**
      * The bones' matrices have, unlike objects', the coordinate system identical to JME's (Y axis is UP, X to the right and Z toward us).
      * So in order to have them loaded properly we need to transform their armature matrix (which blender sees as rotated) to make sure we get identical results.

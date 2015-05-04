@@ -47,12 +47,6 @@ public class MatParamTexture extends MatParam {
     private int unit;
     private ColorSpace colorSpace;
 
-    public MatParamTexture(VarType type, String name, Texture texture, int unit) {
-        super(type, name, texture);
-        this.texture = texture;
-        this.unit = unit;
-    }
-    
     public MatParamTexture(VarType type, String name, Texture texture, int unit, ColorSpace colorSpace) {
         super(type, name, texture);
         this.texture = texture;
@@ -110,9 +104,7 @@ public class MatParamTexture extends MatParam {
     public void apply(Renderer r, Technique technique) {
         TechniqueDef techDef = technique.getDef();
         r.setTexture(getUnit(), getTextureValue());
-        if (techDef.isUsingShaders()) {
-            technique.updateUniformParam(getPrefixedName(), getVarType(), getUnit());
-        }
+        technique.updateUniformParam(getPrefixedName(), getVarType(), getUnit());
     }
 
     @Override

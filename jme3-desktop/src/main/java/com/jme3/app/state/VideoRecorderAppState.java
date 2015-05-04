@@ -40,6 +40,7 @@ import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.system.Timer;
 import com.jme3.texture.FrameBuffer;
+import com.jme3.texture.Image;
 import com.jme3.util.BufferUtils;
 import com.jme3.util.Screenshots;
 import java.awt.image.BufferedImage;
@@ -70,7 +71,7 @@ public class VideoRecorderAppState extends AbstractAppState {
 
         public Thread newThread(Runnable r) {
             Thread th = new Thread(r);
-            th.setName("jME Video Processing Thread");
+            th.setName("jME3 Video Processor");
             th.setDaemon(true);
             return th;
         }
@@ -228,7 +229,7 @@ public class VideoRecorderAppState extends AbstractAppState {
                 final WorkItem item = freeItems.take();
                 usedItems.add(item);
                 item.buffer.clear();
-                renderer.readFrameBuffer(out, item.buffer);
+                renderer.readFrameBufferWithFormat(out, item.buffer, Image.Format.BGRA8);
                 executor.submit(new Callable<Void>() {
 
                     public Void call() throws Exception {

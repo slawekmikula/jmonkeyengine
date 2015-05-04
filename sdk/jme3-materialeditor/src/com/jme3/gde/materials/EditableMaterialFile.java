@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class EditableMaterialFile {
     private String matDefName;
     private FileObject material;
     private FileObject matDef;
-    private Map<String, MaterialProperty> materialParameters = new HashMap<String, MaterialProperty>();
+    private Map<String, MaterialProperty> materialParameters = new LinkedHashMap<String, MaterialProperty>();
     private Map<String, MaterialProperty> additionalRenderStates = new HashMap<String, MaterialProperty>();
     private List<String> matDefEntries = new ArrayList<String>();
     private ProjectAssetManager manager;
@@ -531,7 +532,7 @@ public class EditableMaterialFile {
                             //TODO: seems like flip is removed due to ImageToAwt
                             texKey.setFlipY(false);
                             Texture texture = manager.loadTexture(texKey);
-                            MatParamTexture newParam = new MatParamTexture(texParam.getVarType(), texParam.getName(), texture, texParam.getUnit());
+                            MatParamTexture newParam = new MatParamTexture(texParam.getVarType(), texParam.getName(), texture, texParam.getUnit(), null);
                             materialParameters.put(newParam.getName(), new MaterialProperty(newParam));
                         } catch (Exception ex) {
                             Exceptions.printStackTrace(ex);

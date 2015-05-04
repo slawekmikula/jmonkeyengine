@@ -40,6 +40,7 @@ import com.jme3.math.FastMath;
 import com.jme3.renderer.Caps;
 import com.jme3.renderer.Renderer;
 import com.jme3.texture.image.ColorSpace;
+import com.jme3.texture.image.LastTextureState;
 import com.jme3.util.BufferUtils;
 import com.jme3.util.NativeObject;
 import java.io.IOException;
@@ -366,7 +367,6 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
     protected int width, height, depth;
     protected int[] mipMapSizes;
     protected ArrayList<ByteBuffer> data;
-    protected transient Object efficientData;
     protected int multiSamples = 1;
     protected ColorSpace colorSpace = null;
 //    protected int mipOffset = 0;
@@ -374,7 +374,19 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
     // attributes relating to GL object
     protected boolean mipsWereGenerated = false;
     protected boolean needGeneratedMips = false;
+    protected LastTextureState lastTextureState = new LastTextureState();
 
+    /**
+     * Internal use only.
+     * The renderer stores the texture state set from the last texture
+     * so it doesn't have to change it unless necessary. 
+     * 
+     * @return The image parameter state.
+     */
+    public LastTextureState getLastTextureState() {
+        return lastTextureState;
+    }
+    
     /**
      * Internal use only. 
      * The renderer marks which images have generated mipmaps in VRAM
@@ -408,10 +420,24 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
     
     /**
      * @return True if the image needs to have mipmaps generated
-     * for it (as requested by the texture).
+     * for it (as requested by the texture). This stays true even
+     * after mipmaps have been generated.
      */
     public boolean isGeneratedMipmapsRequired() {
         return needGeneratedMips;
+    }
+    
+    /**
+     * Sets the update needed flag, while also checking if mipmaps
+     * need to be regenerated.
+     */
+    @Override
+    public void setUpdateNeeded() {
+        super.setUpdateNeeded();
+        if (isGeneratedMipmapsRequired() && !hasMipmaps()) {
+            // Mipmaps are no longer valid, since the image was changed.
+            setMipmapsGenerated(false);
+        }
     }
     
     /**
@@ -429,6 +455,7 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
     public void resetObject() {
         this.id = -1;
         this.mipsWereGenerated = false;
+        this.lastTextureState.reset();
         setUpdateNeeded();
     }
 
@@ -462,6 +489,7 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         Image clone = (Image) super.clone();
         clone.mipMapSizes = mipMapSizes != null ? mipMapSizes.clone() : null;
         clone.data = data != null ? new ArrayList<ByteBuffer>(data) : null;
+        clone.lastTextureState = new LastTextureState();
         clone.setUpdateNeeded();
         return clone;
     }
@@ -501,11 +529,13 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
         
         this();
 
-        if (mipMapSizes != null && mipMapSizes.length <= 1) {
-            mipMapSizes = null;
-        } else {
-            needGeneratedMips = false;
-            mipsWereGenerated = true;
+        if (mipMapSizes != null) {
+            if (mipMapSizes.length <= 1) {
+                mipMapSizes = null;
+            } else {
+                needGeneratedMips = false;
+                mipsWereGenerated = true;
+            }
         }
 
         setFormat(format);
@@ -726,24 +756,18 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
     }
 
     /**
-     * Set the efficient data representation of this image.
-     * <p>
-     * Some system implementations are more efficient at operating
-     * on data other than ByteBuffers, in that case, this method can be used.
-     *
-     * @param efficientData
+     * @deprecated This feature is no longer used by the engine
      */
+    @Deprecated
     public void setEfficentData(Object efficientData){
-        this.efficientData = efficientData;
-        setUpdateNeeded();
     }
 
     /**
-     * @return The efficient data representation of this image.
-     * @see Image#setEfficentData(java.lang.Object)
+     * @deprecated This feature is no longer used by the engine
      */
+    @Deprecated
     public Object getEfficentData(){
-        return efficientData;
+        return null;
     }
 
     /**
@@ -765,8 +789,8 @@ public class Image extends NativeObject implements Savable /*, Cloneable*/ {
              needGeneratedMips = false;
              mipsWereGenerated = false;
         } else {
-             needGeneratedMips = false;
-             mipsWereGenerated = true;
+             needGeneratedMips = true;
+             mipsWereGenerated = false;
         }
 
         setUpdateNeeded();

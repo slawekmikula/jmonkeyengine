@@ -1,7 +1,9 @@
-jMonkeyEngine
+jMonkeyEngine 
 =============
 
-jMonkeyEngine is a 3D game engine for adventurous Java developers. It’s open source, cross platform and cutting edge. And it is all beautifully documented. The 3.0 branch is the latest stable version of the jMonkeyEngine 3 SDK, a complete game development suite. We'll be frequently submitting stable 3.0.x updates until the major 3.1 version arrives in Q4 2014.
+[![Build Status](https://travis-ci.org/jMonkeyEngine/jmonkeyengine.svg?branch=master)](https://travis-ci.org/jMonkeyEngine/jmonkeyengine)
+
+jMonkeyEngine is a 3D game engine for adventurous Java developers. It’s open source, cross platform and cutting edge. And it is all beautifully documented. The 3.0 branch is the latest stable version of the jMonkeyEngine 3 SDK, a complete game development suite. We'll be frequently submitting stable 3.0.x updates until the major 3.1 version arrives.
 
 The engine is used by several commercial game studios and computer-science courses. Here's a taste:
 
@@ -21,7 +23,9 @@ The engine is used by several commercial game studios and computer-science cours
 ## Getting started
 
 Go to http://hub.jmonkeyengine.org/downloads/ to download the jMonkeyEngine SDK.
-[Read the wiki](http://hub.jmonkeyengine.org/wiki/doku.php) for a complete install guide. Power up with some SDK Plugins and AssetPacks and you are off to the races. At this point you're gonna want to [join the forum](http://hub.jmonkeyengine.org/forum/) so our tribe can grow stronger.
+[Read the wiki](http://hub.jmonkeyengine.org/wiki/doku.php) for a complete install guide. Power up with some SDK Plugins and AssetPacks and you are off to the races. At this point you're gonna want to [join the forum](http://hub.jmonkeyengine.org/) so our tribe can grow stronger.
+
+Note: The master branch on GitHub is a development version of the engine and is NOT MEANT TO BE USED IN PRODUCTION, it will break constantly during development of the stable jME versions!
 
 ### Technology Stack
 

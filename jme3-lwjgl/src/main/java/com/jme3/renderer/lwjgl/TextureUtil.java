@@ -42,14 +42,13 @@ import java.util.EnumSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static org.lwjgl.opengl.ARBDepthBufferFloat.*;
-import org.lwjgl.opengl.ARBES3Compatibility;
+import static org.lwjgl.opengl.ARBES3Compatibility.*;
 import static org.lwjgl.opengl.ARBHalfFloatPixel.*;
 import static org.lwjgl.opengl.ARBTextureFloat.*;
 import static org.lwjgl.opengl.ARBTextureMultisample.*;
 import static org.lwjgl.opengl.EXTPackedDepthStencil.*;
 import static org.lwjgl.opengl.EXTPackedFloat.*;
 import static org.lwjgl.opengl.EXTTextureArray.*;
-import static org.lwjgl.opengl.EXTTextureCompressionLATC.*;
 import static org.lwjgl.opengl.EXTTextureCompressionS3TC.*;
 import static org.lwjgl.opengl.EXTTextureSRGB.*;
 import static org.lwjgl.opengl.EXTTextureSharedExponent.*;
@@ -58,6 +57,12 @@ import static org.lwjgl.opengl.GL12.*;
 import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL14.*;
 
+/**
+ * 
+ * Should not be used, has been replaced by Unified Rendering Architechture.
+ * @deprecated
+ */
+@Deprecated 
 class TextureUtil {
 
     static class GLImageFormat {
@@ -134,7 +139,7 @@ class TextureUtil {
         // ETC1 support on regular OpenGL requires ES3 compatibility extension.
         // NOTE: ETC2 is backwards compatible with ETC1, so we can 
         // upload ETC1 textures as ETC2.
-        setFormat(Format.ETC1, ARBES3Compatibility.GL_COMPRESSED_RGB8_ETC2, GL_RGB, GL_UNSIGNED_BYTE, true);
+        setFormat(Format.ETC1, GL_COMPRESSED_RGB8_ETC2, GL_RGB, GL_UNSIGNED_BYTE, true);
     }
     
     //sRGB formats        

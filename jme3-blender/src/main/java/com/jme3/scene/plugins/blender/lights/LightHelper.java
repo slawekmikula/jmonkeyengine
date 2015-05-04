@@ -40,7 +40,6 @@ import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
-import com.jme3.scene.LightNode;
 import com.jme3.scene.plugins.blender.AbstractBlenderHelper;
 import com.jme3.scene.plugins.blender.BlenderContext;
 import com.jme3.scene.plugins.blender.BlenderContext.LoadedDataType;
@@ -67,8 +66,8 @@ public class LightHelper extends AbstractBlenderHelper {
         super(blenderVersion, blenderContext);
     }
 
-    public LightNode toLight(Structure structure, BlenderContext blenderContext) throws BlenderFileException {
-        LightNode result = (LightNode) blenderContext.getLoadedFeature(structure.getOldMemoryAddress(), LoadedDataType.FEATURE);
+    public Light toLight(Structure structure, BlenderContext blenderContext) throws BlenderFileException {
+        Light result = (Light) blenderContext.getLoadedFeature(structure.getOldMemoryAddress(), LoadedDataType.FEATURE);
         if (result != null) {
             return result;
         }
@@ -81,7 +80,9 @@ public class LightHelper extends AbstractBlenderHelper {
                 ((PointLight) light).setRadius(distance);
                 break;
             case 1:// Sun
-                LOGGER.log(Level.WARNING, "'Sun' lamp is not supported in jMonkeyEngine.");
+                LOGGER.log(Level.WARNING, "'Sun' lamp is not supported in jMonkeyEngine. Using PointLight with radius = Float.MAX_VALUE.");
+                light = new PointLight();
+                ((PointLight) light).setRadius(Float.MAX_VALUE);
                 break;
             case 2:// Spot
                 light = new SpotLight();
@@ -98,21 +99,18 @@ public class LightHelper extends AbstractBlenderHelper {
                 ((SpotLight) light).setSpotInnerAngle(innerAngle);
                 break;
             case 3:// Hemi
-                LOGGER.log(Level.WARNING, "'Hemi' lamp is not supported in jMonkeyEngine.");
-                break;
+                LOGGER.log(Level.WARNING, "'Hemi' lamp is not supported in jMonkeyEngine. Using DirectionalLight instead.");
             case 4:// Area
                 light = new DirectionalLight();
                 break;
             default:
                 throw new BlenderFileException("Unknown light source type: " + type);
         }
-        if (light != null) {
-            float r = ((Number) structure.getFieldValue("r")).floatValue();
-            float g = ((Number) structure.getFieldValue("g")).floatValue();
-            float b = ((Number) structure.getFieldValue("b")).floatValue();
-            light.setColor(new ColorRGBA(r, g, b, 1.0f));
-            result = new LightNode(structure.getName(), light);
-        }
-        return result;
+        float r = ((Number) structure.getFieldValue("r")).floatValue();
+        float g = ((Number) structure.getFieldValue("g")).floatValue();
+        float b = ((Number) structure.getFieldValue("b")).floatValue();
+        light.setColor(new ColorRGBA(r, g, b, 1.0f));
+        light.setName(structure.getName());
+        return light;
     }
 }

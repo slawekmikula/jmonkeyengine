@@ -33,20 +33,19 @@ package com.jme3.system;
 
 import com.jme3.app.SettingsDialog;
 import com.jme3.app.SettingsDialog.SelectionListener;
-import com.jme3.asset.AssetManager;
 import com.jme3.asset.AssetNotFoundException;
-import com.jme3.asset.DesktopAssetManager;
 import com.jme3.audio.AudioRenderer;
 import com.jme3.audio.openal.AL;
 import com.jme3.audio.openal.ALAudioRenderer;
 import com.jme3.audio.openal.ALC;
 import com.jme3.audio.openal.EFX;
 import com.jme3.system.JmeContext.Type;
-import com.jme3.texture.Image;
-import com.jme3.texture.image.DefaultImageRaster;
-import com.jme3.texture.image.ImageRaster;
 import com.jme3.util.Screenshots;
 import java.awt.EventQueue;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -55,7 +54,13 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
+import javax.imageio.stream.ImageOutputStream;
+import javax.imageio.stream.MemoryCacheImageOutputStream;
 import javax.swing.SwingUtilities;
 
 /**
@@ -65,26 +70,48 @@ import javax.swing.SwingUtilities;
 public class JmeDesktopSystem extends JmeSystemDelegate {
 
     @Override
-    public AssetManager newAssetManager(URL configFile) {
-        return new DesktopAssetManager(configFile);
+    public URL getPlatformAssetConfigURL() {
+        return Thread.currentThread().getContextClassLoader().getResource("com/jme3/asset/Desktop.cfg");
     }
-
+    
+    private static BufferedImage verticalFlip(BufferedImage original) {
+        AffineTransform tx = AffineTransform.getScaleInstance(1, -1);
+        tx.translate(0, -original.getHeight());
+        AffineTransformOp transformOp = new AffineTransformOp(tx, AffineTransformOp.TYPE_NEAREST_NEIGHBOR);
+        BufferedImage awtImage = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_BGR);
+        Graphics2D g2d = awtImage.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING,
+                             RenderingHints.VALUE_RENDER_SPEED);
+        g2d.drawImage(original, transformOp, 0, 0);
+        g2d.dispose();
+        return awtImage;
+    }
+    
     @Override
     public void writeImageFile(OutputStream outStream, String format, ByteBuffer imageData, int width, int height) throws IOException {
-        BufferedImage awtImage = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
-        Screenshots.convertScreenShot(imageData, awtImage);
-        ImageIO.write(awtImage, format, outStream);
-    }
+        BufferedImage awtImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_BGR);
+        Screenshots.convertScreenShot2(imageData.asIntBuffer(), awtImage);
 
-    @Override
-    public ImageRaster createImageRaster(Image image, int slice) {
-        assert image.getEfficentData() == null;
-        return new DefaultImageRaster(image, slice);
-    }
+        ImageWriter writer = ImageIO.getImageWritersByFormatName(format).next();
+        ImageWriteParam writeParam = writer.getDefaultWriteParam();
 
-    @Override
-    public AssetManager newAssetManager() {
-        return new DesktopAssetManager(null);
+        if (format.equals("jpg")) {
+            JPEGImageWriteParam jpegParam = (JPEGImageWriteParam) writeParam;
+            jpegParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            jpegParam.setCompressionQuality(0.95f);
+        }
+
+        awtImage = verticalFlip(awtImage);
+        
+        ImageOutputStream imgOut = new MemoryCacheImageOutputStream(outStream);
+        writer.setOutput(imgOut);
+        IIOImage outputImage = new IIOImage(awtImage, null, null);
+        try {
+            writer.write(null, outputImage, writeParam);
+        } finally {
+            imgOut.close();
+            writer.dispose();
+        }
     }
 
     @Override
@@ -326,7 +353,7 @@ public class JmeDesktopSystem extends JmeSystemDelegate {
         } catch (SecurityException ex) {
             logger.log(Level.SEVERE, "Security error in creating log file", ex);
         }
-        logger.log(Level.INFO, "Running on {0}", getFullName());
+        logger.log(Level.INFO, getBuildInfo());
     }
 
     @Override

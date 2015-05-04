@@ -82,7 +82,6 @@ public class RenderManager {
     private Material forcedMaterial = null;
     private String forcedTechnique = null;
     private RenderState forcedRenderState = null;
-    private boolean shader;
     private int viewX, viewY, viewWidth, viewHeight;
     private Matrix4f orthoMatrix = new Matrix4f();
     private LightList filteredLightList = new LightList(null);
@@ -476,11 +475,7 @@ public class RenderManager {
      * @param mat The world matrix to set
      */
     public void setWorldMatrix(Matrix4f mat) {
-        if (shader) {
-            uniformBindingManager.setWorldMatrix(mat);
-        } else {
-            renderer.setWorldMatrix(mat);
-        }
+        uniformBindingManager.setWorldMatrix(mat);
     }
 
     /**
@@ -592,29 +587,6 @@ public class RenderManager {
     }
 
     /**
-     * If a spatial is not inside the eye frustum, it
-     * is still rendered in the shadow frustum (shadow casting queue)
-     * through this recursive method.
-     */
-    private void renderShadow(Spatial s, RenderQueue rq) {
-        if (s instanceof Node) {
-            Node n = (Node) s;
-            List<Spatial> children = n.getChildren();
-            for (int i = 0; i < children.size(); i++) {
-                renderShadow(children.get(i), rq);
-            }
-        } else if (s instanceof Geometry) {
-            Geometry gm = (Geometry) s;
-
-            RenderQueue.ShadowMode shadowMode = s.getShadowMode();
-            if (shadowMode != RenderQueue.ShadowMode.Off && shadowMode != RenderQueue.ShadowMode.Receive && !gm.isGrouped()) {
-                //forcing adding to shadow cast mode, culled objects doesn't have to be in the receiver queue
-                rq.addToShadowQueue(gm, RenderQueue.ShadowMode.Cast);
-            }
-        }
-    }
-
-    /**
      * Preloads a scene for rendering.
      * <p>
      * After invocation of this method, the underlying
@@ -695,10 +667,6 @@ public class RenderManager {
 
         // check culling first.
         if (!scene.checkCulling(vp.getCamera())) {
-            // move on to shadow-only render
-            if ((scene.getShadowMode() != RenderQueue.ShadowMode.Off || scene instanceof Node) && scene.getCullHint() != Spatial.CullHint.Always) {
-                renderShadow(scene, vp.getQueue());
-            }
             return;
         }
 
@@ -722,12 +690,6 @@ public class RenderManager {
             }
 
             vp.getQueue().addToQueue(gm, scene.getQueueBucket());
-
-            // add to shadow queue if needed
-            RenderQueue.ShadowMode shadowMode = scene.getShadowMode();
-            if (shadowMode != RenderQueue.ShadowMode.Off) {
-                vp.getQueue().addToShadowQueue(gm, shadowMode);
-            }
         }
     }
 
@@ -901,10 +863,12 @@ public class RenderManager {
     private void setViewPort(Camera cam) {
         // this will make sure to update viewport only if needed
         if (cam != prevCam || cam.isViewportChanged()) {
-            viewX = (int) (cam.getViewPortLeft() * cam.getWidth());
-            viewY = (int) (cam.getViewPortBottom() * cam.getHeight());
-            viewWidth = (int) ((cam.getViewPortRight() - cam.getViewPortLeft()) * cam.getWidth());
-            viewHeight = (int) ((cam.getViewPortTop() - cam.getViewPortBottom()) * cam.getHeight());
+            viewX      = (int) (cam.getViewPortLeft() * cam.getWidth());
+            viewY      = (int) (cam.getViewPortBottom() * cam.getHeight());
+            int viewX2 = (int) (cam.getViewPortRight() * cam.getWidth());
+            int viewY2 = (int) (cam.getViewPortTop() * cam.getHeight());
+            viewWidth  = viewX2 - viewX;
+            viewHeight = viewY2 - viewY;
             uniformBindingManager.setViewPort(viewX, viewY, viewWidth, viewHeight);
             renderer.setViewPort(viewX, viewY, viewWidth, viewHeight);
             renderer.setClipRect(viewX, viewY, viewWidth, viewHeight);
@@ -927,19 +891,10 @@ public class RenderManager {
     }
 
     private void setViewProjection(Camera cam, boolean ortho) {
-        if (shader) {
-            if (ortho) {
-                uniformBindingManager.setCamera(cam, Matrix4f.IDENTITY, orthoMatrix, orthoMatrix);
-            } else {
-                uniformBindingManager.setCamera(cam, cam.getViewMatrix(), cam.getProjectionMatrix(), cam.getViewProjectionMatrix());
-            }
+        if (ortho) {
+            uniformBindingManager.setCamera(cam, Matrix4f.IDENTITY, orthoMatrix, orthoMatrix);
         } else {
-            if (ortho) {
-                renderer.setViewProjectionMatrices(Matrix4f.IDENTITY, orthoMatrix);
-            } else {
-                renderer.setViewProjectionMatrices(cam.getViewMatrix(),
-                        cam.getProjectionMatrix());
-            }
+            uniformBindingManager.setCamera(cam, cam.getViewMatrix(), cam.getProjectionMatrix(), cam.getViewProjectionMatrix());
         }
     }
 
@@ -1087,10 +1042,6 @@ public class RenderManager {
         
         if (prof!=null) prof.vpStep(VpStep.EndRender, vp, null);
     }
-
-    public void setUsingShaders(boolean usingShaders) { 
-        this.shader = usingShaders;
-    }
     
     /**
      * Called by the application to render any ViewPorts
@@ -1110,7 +1061,6 @@ public class RenderManager {
             return;
         }
 
-        this.shader = renderer.getCaps().contains(Caps.GLSL100);
         uniformBindingManager.newFrame();        
 
         if (prof!=null) prof.appStep(AppStep.RenderPreviewViewPorts);        

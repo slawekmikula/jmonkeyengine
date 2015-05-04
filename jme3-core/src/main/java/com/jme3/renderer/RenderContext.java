@@ -96,21 +96,6 @@ public class RenderContext {
     public float polyOffsetUnits = 0;
 
     /**
-     * For normals only. Uses GL_NORMALIZE.
-     * 
-     * @see VertexBuffer#setNormalized(boolean) 
-     */
-    public boolean normalizeEnabled = false;
-
-    /**
-     * For glMatrixMode.
-     * 
-     * @see Renderer#setWorldMatrix(com.jme3.math.Matrix4f) 
-     * @see Renderer#setViewProjectionMatrices(com.jme3.math.Matrix4f, com.jme3.math.Matrix4f) 
-     */
-    public int matrixMode = -1;
-
-    /**
      * @see Mesh#setPointSize(float) 
      */
     public float pointSize = 1;
@@ -202,6 +187,11 @@ public class RenderContext {
      * @see Renderer#renderMesh(com.jme3.scene.Mesh, int, int) 
      */
     public int boundArrayVBO;
+    
+    /**
+     * Currently bound pixel pack pixel buffer.
+     */
+    public int boundPixelPackPBO;
 
     public int numTexturesSet = 0;
 
@@ -251,36 +241,6 @@ public class RenderContext {
     public IDList attribIndexList = new IDList();
     
     /**
-     * Ambient color (GL1 only)
-     */
-    public ColorRGBA ambient;
-    
-    /**
-     * Diffuse color (GL1 only)
-     */
-    public ColorRGBA diffuse;
-    
-    /**
-     * Specular color (GL1 only)
-     */
-    public ColorRGBA specular;
-    
-    /**
-     * Material color (GL1 only)
-     */
-    public ColorRGBA color;
-    
-    /**
-     * Shininess (GL1 only)
-     */
-    public float shininess;
-    
-    /**
-     * Use vertex color (GL1 only)
-     */
-    public boolean useVertexColor;
-    
-    /**
      * depth tets function
      */
     public RenderState.TestFunction depthFunc = RenderState.TestFunction.LessOrEqual;
@@ -290,9 +250,12 @@ public class RenderContext {
      */
     public RenderState.TestFunction alphaFunc = RenderState.TestFunction.Greater;
 
-    
     public int initialDrawBuf;
     public int initialReadBuf;
+    
+    public ColorRGBA clearColor = new ColorRGBA(0,0,0,0);
+    
+    public boolean seamlessCubemap = false;
     
     /**
      * Reset the RenderContext to default GL state
@@ -307,8 +270,6 @@ public class RenderContext {
         polyOffsetEnabled = false;
         polyOffsetFactor = 0;
         polyOffsetUnits = 0;
-        normalizeEnabled = false;
-        matrixMode = -1;
         pointSize = 1;
         blendMode = RenderState.BlendMode.Off;
         wireframe = false;
@@ -322,6 +283,7 @@ public class RenderContext {
         boundElementArrayVBO = 0;
         boundVertexArray = 0;
         boundArrayVBO = 0;
+        boundPixelPackPBO = 0;
         numTexturesSet = 0;
         for (int i = 0; i < boundTextures.length; i++)
             boundTextures[i] = null;
@@ -343,10 +305,9 @@ public class RenderContext {
         frontStencilFunction = RenderState.TestFunction.Always;
         backStencilFunction = RenderState.TestFunction.Always;
         
-        ambient = diffuse = specular = color = null;
-        shininess = 0;
-        useVertexColor = false;
         depthFunc = RenderState.TestFunction.LessOrEqual;    
         alphaFunc = RenderState.TestFunction.Greater;
+        clearColor.set(0,0,0,0);
+        seamlessCubemap = false;
     }
 }

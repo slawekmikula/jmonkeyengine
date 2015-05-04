@@ -139,8 +139,10 @@ public class MaterialLoader implements AssetLoader {
             
             textures[texUnit].setImage(loadedTexture.getImage());
             textures[texUnit].setMinFilter(loadedTexture.getMinFilter());
+            textures[texUnit].setMagFilter(loadedTexture.getMagFilter());
+            textures[texUnit].setAnisotropicFilter(loadedTexture.getAnisotropicFilter());
             textures[texUnit].setKey(loadedTexture.getKey());
-
+            
             // XXX: Is this really neccessary?
             textures[texUnit].setWrap(WrapMode.Repeat);
             if (texName != null){
@@ -151,7 +153,8 @@ public class MaterialLoader implements AssetLoader {
             }
         } catch (AssetNotFoundException ex){
             logger.log(Level.WARNING, "Cannot locate {0} for material {1}", new Object[]{texKey, matName});
-            textures[texUnit].setImage(PlaceholderAssets.getPlaceholderImage());
+            textures[texUnit].setImage(PlaceholderAssets.getPlaceholderImage(assetManager));
+            textures[texUnit].setKey(texKey);
         }
     }
 
@@ -330,10 +333,10 @@ public class MaterialLoader implements AssetLoader {
         }else{
            mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         }
+        mat.setName(matName);
         if (blend){
             RenderState rs = mat.getAdditionalRenderState();
-            rs.setAlphaTest(true);
-            rs.setAlphaFallOff(0.01f);
+            mat.setFloat("AlphaDiscardThreshold", 0.01f);
             rs.setBlendMode(RenderState.BlendMode.Alpha);
             
             if (twoSide){
@@ -418,13 +421,18 @@ public class MaterialLoader implements AssetLoader {
 
         noLight = false;
         Arrays.fill(textures, null);
+        ambient = null;
         diffuse = null;
         specular = null;
+        emissive = null;
         shinines = 0f;
         vcolor = false;
         blend = false;
         texUnit = 0;
         separateTexCoord = false;
+        twoSide = false;
+        matName = null;
+        texName = null;
         return mat;
     }
     
@@ -460,7 +468,7 @@ public class MaterialLoader implements AssetLoader {
                 }
                 readMaterial(statement);
                 Material mat = compileMaterial();
-                list.put(matName, mat);
+                list.put(mat.getName(), mat);
             }
         }
         

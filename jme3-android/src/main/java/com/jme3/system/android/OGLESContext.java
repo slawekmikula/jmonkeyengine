@@ -46,12 +46,16 @@ import android.view.ViewGroup.LayoutParams;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import com.jme3.input.*;
-import com.jme3.input.android.AndroidSensorJoyInput;
 import com.jme3.input.android.AndroidInputHandler;
+import com.jme3.input.android.AndroidInputHandler14;
 import com.jme3.input.controls.SoftTextDialogInputListener;
 import com.jme3.input.dummy.DummyKeyInput;
 import com.jme3.input.dummy.DummyMouseInput;
-import com.jme3.renderer.android.OGLESShaderRenderer;
+import com.jme3.renderer.android.AndroidGL;
+import com.jme3.renderer.opengl.GL;
+import com.jme3.renderer.opengl.GLExt;
+import com.jme3.renderer.opengl.GLFbo;
+import com.jme3.renderer.opengl.GLRenderer;
 import com.jme3.system.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -67,16 +71,13 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
     protected final AtomicBoolean needClose = new AtomicBoolean(false);
     protected AppSettings settings = new AppSettings(true);
 
-    /*
-     * >= OpenGL ES 2.0 (Android 2.2+)
-     */
-    protected OGLESShaderRenderer renderer;
+    protected GLRenderer renderer;
     protected Timer timer;
     protected SystemListener listener;
     protected boolean autoFlush = true;
     protected AndroidInputHandler androidInput;
-    protected int minFrameDuration = 0;                   // No FPS cap
-    protected JoyInput androidSensorJoyInput = null;
+    protected long minFrameDuration = 0;                   // No FPS cap
+    protected long lastUpdateTime = 0;
 
     public OGLESContext() {
     }
@@ -104,12 +105,19 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
             if (info.reqGlEsVersion < 0x20000) {
                 throw new UnsupportedOperationException("OpenGL ES 2.0 is not supported on this device");
             }
+        } else if (Build.VERSION.SDK_INT < 9){
+            throw new UnsupportedOperationException("jME3 requires Android 2.3 or later");
         }
 
         // Start to set up the view
         GLSurfaceView view = new GLSurfaceView(context);
+        logger.log(Level.INFO, "Android Build Version: {0}", Build.VERSION.SDK_INT);
         if (androidInput == null) {
-            androidInput = new AndroidInputHandler();
+            if (Build.VERSION.SDK_INT >= 14) {
+                androidInput = new AndroidInputHandler14();
+            } else if (Build.VERSION.SDK_INT >= 9){
+                androidInput = new AndroidInputHandler();
+            }
         }
         androidInput.setView(view);
         androidInput.loadSettings(settings);
@@ -186,8 +194,10 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
         });
 
         timer = new NanoTimer();
-        renderer = new OGLESShaderRenderer();
-
+        Object gl = new AndroidGL();
+        // gl = GLTracer.createGlesTracer((GL)gl, (GLExt)gl);
+        // gl = new GLDebugES((GL)gl, (GLExt)gl);
+        renderer = new GLRenderer((GL)gl, (GLExt)gl, (GLFbo)gl);
         renderer.initialize();
 
         JmeSystem.setSoftTextDialogInput(this);
@@ -225,6 +235,12 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
             androidInput.loadSettings(settings);
         }
 
+        if (settings.getFrameRate() > 0) {
+            minFrameDuration = (long)(1000d / (double)settings.getFrameRate()); // ms
+            logger.log(Level.FINE, "Setting min tpf: {0}ms", minFrameDuration);
+        } else {
+            minFrameDuration = 0;
+        }
     }
 
     @Override
@@ -254,15 +270,12 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
 
     @Override
     public JoyInput getJoyInput() {
-        if (androidSensorJoyInput == null) {
-            androidSensorJoyInput = new AndroidSensorJoyInput();
-        }
-        return androidSensorJoyInput;
+        return androidInput.getJoyInput();
     }
 
     @Override
     public TouchInput getTouchInput() {
-        return androidInput;
+        return androidInput.getTouchInput();
     }
 
     @Override
@@ -320,23 +333,25 @@ public class OGLESContext implements JmeContext, GLSurfaceView.Renderer, SoftTex
                 throw new IllegalStateException("onDrawFrame without create");
             }
 
-            long milliStart = System.currentTimeMillis();
-
             listener.update();
             if (autoFlush) {
-                renderer.onFrame();
+                renderer.postFrame();
             }
 
-            long milliDelta = System.currentTimeMillis() - milliStart;
+            long updateDelta = System.currentTimeMillis() - lastUpdateTime;
 
             // Enforce a FPS cap
-            if (milliDelta < minFrameDuration) {
-                //logger.log(Level.FINE, "Time per frame {0}", milliDelta);
+            if (updateDelta < minFrameDuration) {
+//                    logger.log(Level.INFO, "lastUpdateTime: {0}, updateDelta: {1}, minTimePerFrame: {2}",
+//                            new Object[]{lastUpdateTime, updateDelta, minTimePerFrame});
                 try {
-                    Thread.sleep(minFrameDuration - milliDelta);
+                    Thread.sleep(minFrameDuration - updateDelta);
                 } catch (InterruptedException e) {
                 }
             }
+
+            lastUpdateTime = System.currentTimeMillis();
+
         }
     }
 

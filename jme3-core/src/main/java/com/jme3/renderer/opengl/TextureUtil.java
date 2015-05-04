@@ -32,6 +32,7 @@
 package com.jme3.renderer.opengl;
 
 import com.jme3.renderer.Caps;
+import com.jme3.renderer.RenderContext;
 import com.jme3.renderer.RendererException;
 import com.jme3.texture.Image;
 import com.jme3.texture.Image.Format;
@@ -53,29 +54,33 @@ final class TextureUtil {
     private final GL gl;
     private final GL2 gl2;
     private final GLExt glext;
+    private final RenderContext context;
     private GLImageFormat[][] formats;
 
-    public TextureUtil(GL gl, GL2 gl2, GLExt glext) {
+    public TextureUtil(GL gl, GL2 gl2, GLExt glext, RenderContext context) {
         this.gl = gl;
         this.gl2 = gl2;
         this.glext = glext;
+        this.context = context;
     }
     
     public void initialize(EnumSet<Caps> caps) {
-        StringBuilder sb = new StringBuilder();
         this.formats = GLImageFormats.getFormatsForCaps(caps);
-        sb.append("Supported texture formats: \n");
-        for (int i = 0; i < Format.values().length; i++) {
-            Format format = Format.values()[i];
-            if (formats[0][i] != null) {
-                boolean srgb = formats[1][i] != null;
-                sb.append("\t").append(format.toString());
-                sb.append(" (Linear");
-                if (srgb) sb.append("/sRGB");
-                sb.append(")\n");
+        if (logger.isLoggable(Level.FINE)) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Supported texture formats: \n");
+            for (int i = 0; i < Format.values().length; i++) {
+                Format format = Format.values()[i];
+                if (formats[0][i] != null) {
+                    boolean srgb = formats[1][i] != null;
+                    sb.append("\t").append(format.toString());
+                    sb.append(" (Linear");
+                    if (srgb) sb.append("/sRGB");
+                    sb.append(")\n");
+                }
             }
+            logger.log(Level.FINE, sb.toString());
         }
-        logger.log(Level.INFO, sb.toString());
     }
 
     public GLImageFormat getImageFormat(Format fmt, boolean isSrgb) {
@@ -210,24 +215,21 @@ final class TextureUtil {
         Image.Format jmeFormat = image.getFormat();
         GLImageFormat oglFormat = getImageFormatWithError(jmeFormat, getSrgbFormat);
 
-        ByteBuffer data;
+        ByteBuffer data = null;
         int sliceCount = 1;
-        if (index >= 0 && image.getData() != null && image.getData().size() > 0) {
+        
+        if (index >= 0) {
             data = image.getData(index);
+        }
+        
+        if (image.getData() != null && image.getData().size() > 0) {
             sliceCount = image.getData().size();
-        } else {
-            data = null;
         }
 
         int width = image.getWidth();
         int height = image.getHeight();
         int depth = image.getDepth();
         
-
-        if (data != null) {
-            gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1);
-        }
-
         int[] mipSizes = image.getMipMapSizes();
         int pos = 0;
         // TODO: Remove unneccessary allocation
@@ -257,108 +259,44 @@ final class TextureUtil {
         }
     }
 
-    /**
-     * Update the texture currently bound to target at with data from the given
-     * Image at position x and y. The parameter index is used as the zoffset in
-     * case a 3d texture or texture 2d array is being updated.
-     *
-     * @param image Image with the source data (this data will be put into the
-     * texture)
-     * @param target the target texture
-     * @param index the mipmap level to update
-     * @param x the x position where to put the image in the texture
-     * @param y the y position where to put the image in the texture
-     */
-    /*
-     public void uploadSubTexture(
-     EnumSet<Caps> caps,
-     Image image,
-     int target,
-     int index,
-     int x,
-     int y,
-     boolean linearizeSrgb) {
-     Image.Format fmt = image.getFormat();
-     GLImageFormat glFmt = getImageFormatWithError(caps, fmt, image.getColorSpace() == ColorSpace.sRGB  && linearizeSrgb);
+    public void uploadSubTexture(Image image, int target, int index, int x, int y, boolean linearizeSrgb) {
+        if (target != GL.GL_TEXTURE_2D || image.getDepth() > 1) {
+            throw new UnsupportedOperationException("Updating non-2D texture is not supported");
+        }
+        
+        if (image.getMipMapSizes() != null) {
+            throw new UnsupportedOperationException("Updating mip-mappped images is not supported");
+        }
+        
+        if (image.getMultiSamples() > 1) {
+            throw new UnsupportedOperationException("Updating multisampled images is not supported");
+        }
+        
+        Image.Format jmeFormat = image.getFormat();
+        
+        if (jmeFormat.isCompressed()) {
+            throw new UnsupportedOperationException("Updating compressed images is not supported");
+        } else if (jmeFormat.isDepthFormat()) {
+            throw new UnsupportedOperationException("Updating depth images is not supported");
+        }
+        
+        boolean getSrgbFormat = image.getColorSpace() == ColorSpace.sRGB && linearizeSrgb;
+        GLImageFormat oglFormat = getImageFormatWithError(jmeFormat, getSrgbFormat);
+        
+        ByteBuffer data = null;
+        
+        if (index >= 0) {
+            data = image.getData(index);
+        }
+        
+        if (data == null) {
+            throw new IndexOutOfBoundsException("The image index " + index + " is not valid for the given image");
+        }
 
-     ByteBuffer data = null;
-     if (index >= 0 && image.getData() != null && image.getData().size() > 0) {
-     data = image.getData(index);
-     }
-
-     int width = image.getWidth();
-     int height = image.getHeight();
-     int depth = image.getDepth();
-
-     if (data != null) {
-     gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1);
-     }
-
-     int[] mipSizes = image.getMipMapSizes();
-     int pos = 0;
-
-     // TODO: Remove unneccessary allocation
-     if (mipSizes == null){
-     if (data != null) {
-     mipSizes = new int[]{ data.capacity() };
-     } else {
-     mipSizes = new int[]{ width * height * fmt.getBitsPerPixel() / 8 };
-     }
-     }
-
-     int samples = image.getMultiSamples();
-
-     for (int i = 0; i < mipSizes.length; i++){
-     int mipWidth =  Math.max(1, width  >> i);
-     int mipHeight = Math.max(1, height >> i);
-     int mipDepth =  Math.max(1, depth  >> i);
-
-     if (data != null){
-     data.position(pos);
-     data.limit(pos + mipSizes[i]);
-     }
-
-     // to remove the cumbersome if/then/else stuff below we'll update the pos right here and use continue after each
-     // gl*Image call in an attempt to unclutter things a bit
-     pos += mipSizes[i];
-
-     int glFmtInternal = glFmt.internalFormat;
-     int glFmtFormat = glFmt.format;
-     int glFmtDataType = glFmt.dataType;
-
-     if (glFmt.compressed && data != null){
-     if (target == GL.GL_TEXTURE_3D){
-     gl.glCompressedTexSubImage3D(target, i, x, y, index, mipWidth, mipHeight, mipDepth, glFmtInternal, data);
-     continue;
-     }
-
-     // all other targets use 2D: array, cubemap, 2d
-     gl.glCompressedTexSubImage2D(target, i, x, y, mipWidth, mipHeight, glFmtInternal, data);
-     continue;
-     }
-
-     if (target == GL.GL_TEXTURE_3D){
-     gl.glTexSubImage3D(target, i, x, y, index, mipWidth, mipHeight, mipDepth, glFmtFormat, glFmtDataType, data);
-     continue;
-     }
-
-     if (target == GLExt.GL_TEXTURE_2D_ARRAY_EXT){
-     // prepare data for 2D array or upload slice
-     if (index == -1){
-     gl.glTexSubImage3D(target, i, x, y, index, mipWidth, mipHeight, mipDepth, glFmtFormat, glFmtDataType, data);
-     continue;
-     }
-
-     gl.glTexSubImage3D(target, i, x, y, index, width, height, 1, glFmtFormat, glFmtDataType, data);
-     continue;
-     }
-
-     if (samples > 1){
-     throw new IllegalStateException("Cannot update multisample textures");
-     }
-
-     gl.glTexSubImage2D(target, i, x, y, mipWidth, mipHeight, glFmtFormat, glFmtDataType, data);
-     }
-     }
-     */
+        data.position(0);
+        data.limit(data.capacity());
+        
+        gl.glTexSubImage2D(target, 0, x, y, image.getWidth(), image.getHeight(), 
+                           oglFormat.format, oglFormat.dataType, data);
+    }
 }

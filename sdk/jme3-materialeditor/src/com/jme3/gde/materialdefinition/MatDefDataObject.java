@@ -36,6 +36,7 @@ import com.jme3.gde.materialdefinition.navigator.MatDefNavigatorPanel;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
+import javax.swing.JEditorPane;
 import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectManager;
 import org.netbeans.core.spi.multiview.MultiViewElement;
@@ -131,6 +132,7 @@ public class MatDefDataObject extends MultiDataObject {
     private EditableMatDefFile file = null;
     private boolean loaded = false;
 
+    @SuppressWarnings("LeakingThisInConstructor")
     public MatDefDataObject(FileObject pf, MultiFileLoader loader) throws DataObjectExistsException, IOException {
         super(pf, loader);
         registerEditor("text/jme-materialdefinition", true);
@@ -222,13 +224,16 @@ public class MatDefDataObject extends MultiDataObject {
             @Override
             public void componentActivated() {
                 super.componentActivated();
-                getEditorPane().addKeyListener(listener);
+                getEditorPane().addKeyListener(listener);                
             }
 
             @Override
             public void componentDeactivated() {
                 super.componentDeactivated();
-                getEditorPane().removeKeyListener(listener);
+                JEditorPane editorPane = getEditorPane();
+                if (editorPane != null) {
+                    getEditorPane().removeKeyListener(listener);
+                }
             }
 
             @Override
@@ -237,15 +242,16 @@ public class MatDefDataObject extends MultiDataObject {
                 obj.unload();
             }
         };
-
-
+        obj.getLookupContents().add(ed);
         return ed;
     }
 
     @Override
     protected void handleDelete() throws IOException {
         MatDefMetaData metaData = lookup.lookup(MatDefMetaData.class);
-        metaData.cleanup();
+        if(metaData != null){
+            metaData.cleanup();
+        }
         super.handleDelete();
     }
 
@@ -291,44 +297,15 @@ public class MatDefDataObject extends MultiDataObject {
 
     public void unload() {
         if (loaded) {
-            loaded = false;
+            loaded = false;            
             getLookup().lookup(MatDefNavigatorPanel.class).updateData(null);
+            getEditableFile().cleanup();
+
         }
     }
 
     public InstanceContent getLookupContents() {
         return lookupContents;
     }
-//    @Override
-//    public synchronized void saveAsset() throws IOException {
-//        
-////        ProgressHandle progressHandle = ProgressHandleFactory.createHandle("Saving File..");
-////        progressHandle.start();
-// //      BinaryExporter exp = BinaryExporter.getInstance();
-//        FileLock lock = null;
-//        OutputStream out = null;
-//        try {
-//             PrintWriter to = new PrintWriter(getPrimaryFile().getOutputStream(lock));
-//            try {
-//                to.print(getEditableFile().getMatDefStructure().toString());
-//              
-//            } finally {
-//                to.close();
-//            }
-//        } finally {
-//            if (lock != null) {
-//                lock.releaseLock();
-//            }
-//            if (out != null) {
-//                out.close();
-//            }
-//        }
-//     //   progressHandle.finish();
-//        StatusDisplayer.getDefault().setStatusText(getPrimaryFile().getNameExt() + " saved.");
-//        setModified(false);
-//        
-////        getPrimaryFile().
-////                getOutputStream().write(getEditableFile().getMatDefStructure().toString().getBytes());        
-//       
-//    }
+
 }

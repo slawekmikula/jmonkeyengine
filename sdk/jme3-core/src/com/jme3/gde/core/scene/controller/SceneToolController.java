@@ -47,12 +47,14 @@ public class SceneToolController implements AppState {
     protected Material blueMat;
     protected AbstractCameraController camController;
 
+    @SuppressWarnings("LeakingThisInConstructor")
     public SceneToolController(AssetManager manager) {
         this.toolsNode = new Node("ToolsNode");
-        initTools();
+        initTools();        
         SceneApplication.getApplication().getStateManager().attach(this);
     }
 
+    @SuppressWarnings("LeakingThisInConstructor")
     public SceneToolController(Node toolsNode, AssetManager manager) {
         this.toolsNode = toolsNode;
         this.manager = manager;
@@ -64,7 +66,7 @@ public class SceneToolController implements AppState {
         this.camController = camController;
     }
 
-    protected void initTools() {
+    protected final void initTools() {
 
         blueMat = createBlueMat();
         
@@ -88,10 +90,7 @@ public class SceneToolController implements AppState {
         //grid
         grid = new Geometry("grid", new Grid(20, 20, 1.0f));
         grid.setMaterial(grayMat);
-        grid.setLocalTranslation(-10, 0, -10);
-        
-        final Spatial cursor = this.cursor;
-        final Node toolsNode = this.toolsNode;
+        grid.setLocalTranslation(-10, 0, -10);        
         SceneApplication.getApplication().enqueue(new Callable<Object>() {
             public Object call() throws Exception {
                 toolsNode.attachChild(cursor);
@@ -372,15 +371,16 @@ public class SceneToolController implements AppState {
     public void stateDetached(AppStateManager asm) {
     }
 
-    public void update(float f) {
+    public void update(float f) {     
         if (selected == null || selectionShape == null) {
             return;
         }
 
         selectionShape.setLocalTranslation(selected.getWorldTranslation());
         selectionShape.setLocalRotation(selected.getWorldRotation());
+        selectionShape.setLocalScale(selected.getWorldScale());
+        
     }
-
     public void render(RenderManager rm) {
     }
 

@@ -127,6 +127,7 @@ public class Glsl100ShaderGenerator extends ShaderGenerator {
             unIndent();
             startCondition(shaderNode.getCondition(), source);
             source.append(nodeSource);
+            source.append("\n");
             endCondition(shaderNode.getCondition(), source);
             indent();
         }
@@ -396,7 +397,18 @@ public class Glsl100ShaderGenerator extends ShaderGenerator {
         source.append(mapping.getLeftVariable().getNameSpace());
         source.append("_");
         source.append(mapping.getLeftVariable().getName());
+        
+        //left swizzle, the variable can't be declared and assigned on the same line. 
         if (mapping.getLeftSwizzling().length() > 0) {
+            //initialize the declared variable to 0.0
+            source.append(" = ");
+            source.append(mapping.getLeftVariable().getType());
+            source.append("(0.0);\n");
+            appendIndent(source);
+            //assign the value on a new line
+            source.append(mapping.getLeftVariable().getNameSpace());
+            source.append("_");
+            source.append(mapping.getLeftVariable().getName());
             source.append(".");
             source.append(mapping.getLeftSwizzling());
         }
@@ -517,7 +529,7 @@ public class Glsl100ShaderGenerator extends ShaderGenerator {
      * @return the modified source code
      */
     protected String replace(String nodeSource, ShaderNodeVariable var, String newName) {
-        nodeSource = nodeSource.replaceAll("(\\W)" + var.getName() + "(\\W)", "$1" + newName + "$2");
+        nodeSource = nodeSource.replaceAll("(?<=\\W)" + var.getName() + "(?=\\W)",  newName);
         return nodeSource;
     }
 

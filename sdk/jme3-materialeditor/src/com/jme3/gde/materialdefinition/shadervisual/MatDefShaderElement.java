@@ -31,16 +31,16 @@
  */
 package com.jme3.gde.materialdefinition.shadervisual;
 
-import com.jme3.gde.core.assets.ProjectAssetManager;
-import com.jme3.gde.materialdefinition.EditableMatDefFile;
 import com.jme3.gde.materialdefinition.MatDefDataObject;
 import javax.swing.Action;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.text.EditorKit;
 import org.netbeans.core.spi.multiview.CloseOperationState;
 import org.netbeans.core.spi.multiview.MultiViewElement;
 import org.netbeans.core.spi.multiview.MultiViewElementCallback;
 import org.openide.awt.UndoRedo;
+import org.openide.text.CloneableEditorSupport;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle.Messages;
 import org.openide.windows.TopComponent;
@@ -55,16 +55,22 @@ position = 3000)
 @Messages("LBL_MatDef_SHADER=Shader")
 public final class MatDefShaderElement extends JPanel implements MultiViewElement {
 
-    private MatDefDataObject obj;
-    private ShaderVisualToolBar toolbar = new ShaderVisualToolBar();
+    private final MatDefDataObject obj;
+    private final ShaderVisualToolBar toolbar = new ShaderVisualToolBar();
     private transient MultiViewElementCallback callback;    
 
+    @SuppressWarnings("LeakingThisInConstructor")
     public MatDefShaderElement(Lookup lkp) {
         obj = lkp.lookup(MatDefDataObject.class);
         assert obj != null;
         initComponents();
         toolbar.setParent(this);       
         refresh();
+
+        String mime = "text/x-glsl";
+        EditorKit ek = CloneableEditorSupport.getEditorKit(mime);
+        jEditorPane1.setEditorKit(ek);
+        jEditorPane1.setContentType(mime);                
     }
 
     public final void refresh() {

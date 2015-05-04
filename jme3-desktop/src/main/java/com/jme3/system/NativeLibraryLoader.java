@@ -40,6 +40,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -92,13 +94,13 @@ public final class NativeLibraryLoader {
      * @param path The path inside the natives-jar or classpath
      * corresponding to this library. Must be compatible with the platform 
      * argument.
-     * @param isJNI True if this is a JNI library, false if this is a regular
-     * native (C/C++) library.
+     * @param extractAsName The filename that the library should be extracted as,
+     * if null, use the same name as in the path.
      */
     public static void registerNativeLibrary(String name, Platform platform,
-            String path, boolean isJNI) {
+            String path, String extractAsName) {
         nativeLibraryMap.put(new NativeLibrary.Key(name, platform),
-                new NativeLibrary(name, platform, path, isJNI));
+                new NativeLibrary(name, platform, path, extractAsName));
     }
     
     /**
@@ -119,7 +121,7 @@ public final class NativeLibraryLoader {
      */
     public static void registerNativeLibrary(String name, Platform platform,
             String path) {
-        registerNativeLibrary(name, platform, path, true);
+        registerNativeLibrary(name, platform, path, null);
     }
     
     static {
@@ -128,32 +130,34 @@ public final class NativeLibraryLoader {
         registerNativeLibrary("lwjgl", Platform.Windows64, "native/windows/lwjgl64.dll");
         registerNativeLibrary("lwjgl", Platform.Linux32,   "native/linux/liblwjgl.so");
         registerNativeLibrary("lwjgl", Platform.Linux64,   "native/linux/liblwjgl64.so");
-        registerNativeLibrary("lwjgl", Platform.MacOSX32,  "native/macosx/liblwjgl.jnilib");
-        registerNativeLibrary("lwjgl", Platform.MacOSX64,  "native/macosx/liblwjgl.jnilib");
+        registerNativeLibrary("lwjgl", Platform.MacOSX32,  "native/macosx/liblwjgl.dylib");
+        registerNativeLibrary("lwjgl", Platform.MacOSX64,  "native/macosx/liblwjgl.dylib");
         
         // OpenAL
-        registerNativeLibrary("openal", Platform.Windows32, "native/windows/OpenAL32.dll", false);
-        registerNativeLibrary("openal", Platform.Windows64, "native/windows/OpenAL64.dll", false);
-        registerNativeLibrary("openal", Platform.Linux32,   "native/linux/libopenal.so", false);
-        registerNativeLibrary("openal", Platform.Linux64,   "native/linux/libopenal64.so", false);
-        registerNativeLibrary("openal", Platform.MacOSX32,  "native/macosx/openal.dylib", false);
-        registerNativeLibrary("openal", Platform.MacOSX64,  "native/macosx/openal.dylib", false);
+        // For OSX: Need to add lib prefix when extracting
+        registerNativeLibrary("openal", Platform.Windows32, "native/windows/OpenAL32.dll");
+        registerNativeLibrary("openal", Platform.Windows64, "native/windows/OpenAL64.dll");
+        registerNativeLibrary("openal", Platform.Linux32,   "native/linux/libopenal.so");
+        registerNativeLibrary("openal", Platform.Linux64,   "native/linux/libopenal64.so");
+        registerNativeLibrary("openal", Platform.MacOSX32,  "native/macosx/openal.dylib", "libopenal.dylib");
+        registerNativeLibrary("openal", Platform.MacOSX64,  "native/macosx/openal.dylib", "libopenal.dylib");
         
         // BulletJme
         registerNativeLibrary("bulletjme", Platform.Windows32, "native/windows/x86/bulletjme.dll");
         registerNativeLibrary("bulletjme", Platform.Windows64, "native/windows/x86_64/bulletjme.dll");
         registerNativeLibrary("bulletjme", Platform.Linux32,   "native/linux/x86/libbulletjme.so");
         registerNativeLibrary("bulletjme", Platform.Linux64,   "native/linux/x86_64/libbulletjme.so");
-        registerNativeLibrary("bulletjme", Platform.MacOSX32,  "native/macosx/x86/libbulletjme.jnilib");
-        registerNativeLibrary("bulletjme", Platform.MacOSX64,  "native/macosx/x86_64/libbulletjme.jnilib");
+        registerNativeLibrary("bulletjme", Platform.MacOSX32,  "native/osx/x86/libbulletjme.dylib");
+        registerNativeLibrary("bulletjme", Platform.MacOSX64,  "native/osx/x86_64/libbulletjme.dylib");
         
         // JInput
+        // For OSX: Need to rename extension jnilib -> dylib when extracting
         registerNativeLibrary("jinput", Platform.Windows32, "native/windows/jinput-raw.dll");
         registerNativeLibrary("jinput", Platform.Windows64, "native/windows/jinput-raw_64.dll");
         registerNativeLibrary("jinput", Platform.Linux32,   "native/windows/libjinput-linux.so");
         registerNativeLibrary("jinput", Platform.Linux64,   "native/windows/libjinput-linux64.so");
-        registerNativeLibrary("jinput", Platform.MacOSX32,  "native/macosx/libjinput-osx.jnilib");
-        registerNativeLibrary("jinput", Platform.MacOSX64,  "native/macosx/libjinput-osx.jnilib");
+        registerNativeLibrary("jinput", Platform.MacOSX32,  "native/macosx/libjinput-osx.jnilib", "libjinput-osx.dylib");
+        registerNativeLibrary("jinput", Platform.MacOSX64,  "native/macosx/libjinput-osx.jnilib", "libjinput-osx.dylib");
         
         // JInput Auxiliary (only required on Windows)
         registerNativeLibrary("jinput-dx8", Platform.Windows32, "native/windows/jinput-dx8.dll");
@@ -222,7 +226,7 @@ public final class NativeLibraryLoader {
         if (extractionFolder == null) {
             File workingFolder = new File("").getAbsoluteFile();
             if (!workingFolder.canWrite()) {
-                setExtractionDirToStorageDir();
+                setExtractionFolderToUserCache();
             } else {
                 try {
                     File file = new File(workingFolder + File.separator + ".jmetestwrite");
@@ -230,27 +234,81 @@ public final class NativeLibraryLoader {
                     file.delete();
                     extractionFolder = workingFolder;
                 } catch (Exception e) {
-                    setExtractionDirToStorageDir();
+                    setExtractionFolderToUserCache();
                 }
             }
         }
         return extractionFolder;
     }
+    
+    /**
+     * Determine jME3's cache folder for the user account based on the OS.
+     * 
+     * If the OS cache folder is missing, the assumption is that this
+     * particular version of the OS does not have a dedicated cache folder,
+     * hence, we use the user's home folder instead as the root.
+     * 
+     * The folder returned is as follows:<br>
+     * <ul>
+     * <li>Windows: ~\AppData\Local\jme3</li>
+     * <li>Mac OS X: ~/Library/Caches/jme3</li>
+     * <li>Linux: ~/.cache/jme3</li>
+     * </ul>
+     * 
+     * @return the user cache folder.
+     */
+    private static File getJmeUserCacheFolder() {
+        File userHomeFolder = new File(System.getProperty("user.home"));
+        File userCacheFolder = null;
+        
+        switch (JmeSystem.getPlatform()) {
+            case Linux32:
+            case Linux64:
+                userCacheFolder = new File(userHomeFolder, ".cache");
+                break;
+            case MacOSX32:
+            case MacOSX64:
+            case MacOSX_PPC32:
+            case MacOSX_PPC64:
+                userCacheFolder = new File(new File(userHomeFolder, "Library"), "Caches");
+                break;
+            case Windows32:
+            case Windows64:
+                userCacheFolder = new File(new File(userHomeFolder, "AppData"), "Local");
+                break;
+        }
+        
+        if (userCacheFolder == null || !userCacheFolder.exists()) {
+            // Fallback to home directory if cache folder is missing
+            return new File(userHomeFolder, ".jme3");
+        }
+        
+        return new File(userCacheFolder, "jme3");
+    }
 
-    private static void setExtractionDirToStorageDir() {
-        logger.log(Level.WARNING, "Working directory is not writable. Using home directory instead.");
-        extractionFolder = new File(JmeSystem.getStorageFolder(),
-                "natives_" + Integer.toHexString(computeNativesHash()));
+    private static void setExtractionFolderToUserCache() {
+        File extractFolderInHome = getJmeUserCacheFolder();
+        
+        if (!extractFolderInHome.exists()) {
+            extractFolderInHome.mkdir();
+        }
+        
+        extractionFolder = new File(extractFolderInHome, "natives_" + Integer.toHexString(computeNativesHash()));
+        
         if (!extractionFolder.exists()) {
             extractionFolder.mkdir();
         }
+        
+        logger.log(Level.WARNING, "Working directory is not writable. "
+                                + "Natives will be extracted to:\n{0}", 
+                                extractionFolder);
     }
 
     private static int computeNativesHash() {
         URLConnection conn = null;
         try {
             String classpath = System.getProperty("java.class.path");
-            URL url = Thread.currentThread().getContextClassLoader().getResource("com/jme3/system/Natives.class");
+            URL url = Thread.currentThread().getContextClassLoader().getResource("com/jme3/system/NativeLibraryLoader.class");
 
             StringBuilder sb = new StringBuilder(url.toString());
             if (sb.indexOf("jar:") == 0) {
@@ -275,6 +333,165 @@ public final class NativeLibraryLoader {
                     conn.getInputStream().close();
                     conn.getOutputStream().close();
                 } catch (IOException ex) { }
+            }
+        }
+    }
+    
+    public static File[] getJarsWithNatives() {
+        HashSet<File> jarFiles = new HashSet<File>();
+        for (Map.Entry<NativeLibrary.Key, NativeLibrary> lib : nativeLibraryMap.entrySet()) {
+            File jarFile = getJarForNativeLibrary(lib.getValue().getPlatform(), lib.getValue().getName());
+            if (jarFile != null) {
+                jarFiles.add(jarFile);
+            }
+        }
+        return jarFiles.toArray(new File[0]);
+    }
+    
+    public static void extractNativeLibraries(Platform platform, File targetDir) throws IOException {
+        for (Map.Entry<NativeLibrary.Key, NativeLibrary> lib : nativeLibraryMap.entrySet()) {
+            if (lib.getValue().getPlatform() == platform) {
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs();
+                }
+                extractNativeLibrary(platform, lib.getValue().getName(), targetDir);
+            }
+        }
+    }
+    
+    private static String mapLibraryName_emulated(String name, Platform platform) {
+        switch (platform) {
+            case MacOSX32:
+            case MacOSX64:
+                return name + ".dylib";
+            case Windows32:
+            case Windows64:
+                return name + ".dll";
+            default:
+                return name + ".so";
+        }
+    }
+    
+    /**
+     * Removes platform-specific portions of a library file name so
+     * that it can be accepted by {@link System#loadLibrary(java.lang.String) }.
+     * <p>
+     * E.g.<br>
+     * <ul>
+     * <li>jinput-dx8_64.dll => jinput-dx8_64</li>
+     * <li>liblwjgl64.so => lwjgl64</li>
+     * <li>libopenal.so => openal</li>
+     * </ul>
+     * 
+     * @param filename The filename to strip platform-specific parts
+     * @return The stripped library name
+     */
+    private static String unmapLibraryName(String filename) {
+        StringBuilder sb = new StringBuilder(filename);
+        if (sb.indexOf("lib") == 0 && !filename.toLowerCase().endsWith(".dll")) {
+            sb.delete(0, 3);
+        }
+        int dot = sb.lastIndexOf(".");
+        if (dot > 0) {
+            sb.delete(dot, sb.length());
+        }
+        return sb.toString();
+    }
+    
+    public static File getJarForNativeLibrary(Platform platform, String name) {
+        NativeLibrary library = nativeLibraryMap.get(new NativeLibrary.Key(name, platform));
+        if (library == null) {
+            return null;
+        }
+
+        String pathInJar = library.getPathInNativesJar();
+        if (pathInJar == null) {
+            return null;
+        }
+        
+        String fileNameInJar;
+        if (pathInJar.contains("/")) {
+            fileNameInJar = pathInJar.substring(pathInJar.lastIndexOf("/") + 1);
+        } else {
+            fileNameInJar = pathInJar;
+        }
+        
+        URL url = Thread.currentThread().getContextClassLoader().getResource(pathInJar);
+        if (url == null) {
+            url = Thread.currentThread().getContextClassLoader().getResource(fileNameInJar);
+        }
+        
+        if (url == null) {
+            return null;
+        }
+        
+        StringBuilder sb = new StringBuilder(url.toString());
+        if (sb.indexOf("jar:file:/") == 0) {
+            sb.delete(0, 9);
+            sb.delete(sb.indexOf("!"), sb.length());
+            return new File(sb.toString());
+        } else {
+            return null; // not a jar
+        }
+    }
+    
+    public static void extractNativeLibrary(Platform platform, String name, File targetDir) throws IOException {
+        NativeLibrary library = nativeLibraryMap.get(new NativeLibrary.Key(name, platform));
+        if (library == null) {
+            return;
+        }
+
+        String pathInJar = library.getPathInNativesJar();
+        if (pathInJar == null) {
+            return;
+        }
+        
+        String fileNameInJar;
+        if (pathInJar.contains("/")) {
+            fileNameInJar = pathInJar.substring(pathInJar.lastIndexOf("/") + 1);
+        } else {
+            fileNameInJar = pathInJar;
+        }
+        
+        URL url = Thread.currentThread().getContextClassLoader().getResource(pathInJar);
+        if (url == null) {
+            url = Thread.currentThread().getContextClassLoader().getResource(fileNameInJar);
+        }
+        
+        if (url == null) {
+            return;
+        }
+        
+        String loadedAsFileName;
+        if (library.getExtractedAsName() != null) {
+            loadedAsFileName = library.getExtractedAsName();
+        } else {
+            loadedAsFileName = fileNameInJar;
+        }
+        
+        URLConnection conn = url.openConnection();
+        InputStream in = conn.getInputStream();
+        
+        File targetFile = new File(targetDir, loadedAsFileName);
+        OutputStream out = null;
+        try {
+            out = new FileOutputStream(targetFile);
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ex) {
+                }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ex) {
+                }
             }
         }
     }
@@ -332,19 +549,27 @@ public final class NativeLibraryLoader {
         
         if (url == null) {
             // Attempt to load it as a system library.
+            String unmappedName = unmapLibraryName(fileNameInJar);
             try {
-                System.loadLibrary(name);
-                logger.log(Level.FINE, "Loaded system installed " + 
-                                       "version of native library: {0}", name);
+                // XXX: HACK. Vary loading method based on library name..
+                // lwjgl and jinput handle loading by themselves.
+                if (!name.equals("lwjgl") && !name.equals("jinput")) {
+                    // Need to unmap it from library specific parts.
+                    System.loadLibrary(unmappedName);
+                    logger.log(Level.FINE, "Loaded system installed "
+                            + "version of native library: {0}", unmappedName);
+                }
             } catch (UnsatisfiedLinkError e) {
                 if (isRequired) {
                     throw new UnsatisfiedLinkError(
-                            "The required native library '" + name + "'"
-                            + " was not found in the classpath via '" + pathInJar + "'");
+                            "The required native library '" + unmappedName + "'"
+                            + " was not found in the classpath via '" + pathInJar
+                            + "'. Error message: " + e.getMessage());
                 } else {
                     logger.log(Level.FINE, "The optional native library ''{0}''" + 
-                                           " was not found in the classpath via ''{1}''", 
-                                           new Object[]{name, pathInJar});
+                                           " was not found in the classpath via ''{1}''" +
+                                           ". Error message: {2}",
+                                           new Object[]{unmappedName, pathInJar, e.getMessage()});
                 }
             }
             
@@ -354,29 +579,9 @@ public final class NativeLibraryLoader {
         // The library has been found and is ready to be extracted.
         // Determine what filename it should be extracted as.
         String loadedAsFileName;
-        if (library.isJNI()) {
-            // JNI libraries on Mac / JDK6 use jnilib extension.
-            // JNI libraries on Mac / JDK7 use dylib extension.
-            String fileNameInJarWithoutExtension 
-                    = fileNameInJar.substring(0, fileNameInJar.lastIndexOf("."));
-            
-            if (platform.is64Bit() && !fileNameInJarWithoutExtension.endsWith("64")) {
-                // This is to avoid conflicts with 32-bit versions of the 
-                // same library when extracting.
-                fileNameInJarWithoutExtension += "64";
-            }
-            
-            String systemJniExtension;
-            String dummyLib = System.mapLibraryName("");
-            if (dummyLib.contains(".")) {
-                systemJniExtension = dummyLib.substring(dummyLib.lastIndexOf("."));
-            } else {
-                systemJniExtension = "";
-            }
-            
-            loadedAsFileName = fileNameInJarWithoutExtension + systemJniExtension;
+        if (library.getExtractedAsName() != null) {
+            loadedAsFileName = library.getExtractedAsName();
         } else {
-            // Not a JNI library.
             // Just use the original filename as it is in the JAR.
             loadedAsFileName = fileNameInJar;
         }

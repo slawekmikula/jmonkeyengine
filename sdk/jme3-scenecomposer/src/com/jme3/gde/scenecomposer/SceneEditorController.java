@@ -58,7 +58,7 @@ import org.openide.util.Lookup;
  * do.. methods do not use global variables.
  * @author normenhansen
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class SceneEditorController implements PropertyChangeListener, NodeListener {
     
     private final JmeSpatial jmeRootNode;
@@ -620,7 +620,7 @@ public class SceneEditorController implements PropertyChangeListener, NodeListen
                 AssetLinkNode linkNode = (AssetLinkNode) selected;
                 linkNode.attachLinkedChild(manager, new ModelKey(assetName));
             } else {
-                ((DesktopAssetManager) manager).clearCache();
+                manager.clearCache();
                 ModelKey key = new ModelKey(assetName);
                 AssetLinkNode linkNode = new AssetLinkNode(key);
                 linkNode.attachLinkedChildren(manager);

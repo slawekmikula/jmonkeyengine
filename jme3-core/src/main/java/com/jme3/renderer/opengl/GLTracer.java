@@ -35,6 +35,7 @@ import com.jme3.util.IntMap;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.HashMap;
@@ -46,7 +47,6 @@ import java.util.HashMap;
  */
 public final class GLTracer implements InvocationHandler {
     
-    private final GL gl;
     private final Object obj;
     private final IntMap<String> constMap;
     private static final HashMap<String, IntMap<Void>> nonEnumArgMap = new HashMap<String, IntMap<Void>>();
@@ -64,12 +64,19 @@ public final class GLTracer implements InvocationHandler {
         noEnumArgs("glScissor", 0, 1, 2, 3);
         noEnumArgs("glClear", 0);
         noEnumArgs("glGetInteger", 1);
+        noEnumArgs("glGetString", 1);
         
         noEnumArgs("glBindTexture", 1);
         noEnumArgs("glPixelStorei", 1);
 //        noEnumArgs("glTexParameteri", 2);
         noEnumArgs("glTexImage2D", 1, 3, 4, 5);
+        noEnumArgs("glTexImage3D", 1, 3, 4, 5, 6);
+        noEnumArgs("glTexSubImage2D", 1, 2, 3, 4, 5);
+        noEnumArgs("glTexSubImage3D", 1, 2, 3, 4, 5, 6, 7);
+        noEnumArgs("glCompressedTexImage2D", 1, 3, 4, 5);
+        noEnumArgs("glCompressedTexSubImage3D", 1, 2, 3, 4, 5, 6, 7);
         noEnumArgs("glDeleteTextures", 0);
+        noEnumArgs("glReadPixels", 0, 1, 2, 3);
         
         noEnumArgs("glBindBuffer", 1);
         noEnumArgs("glEnableVertexAttribArray", 0);
@@ -78,12 +85,16 @@ public final class GLTracer implements InvocationHandler {
         noEnumArgs("glDrawRangeElements", 1, 2, 3, 5);
         noEnumArgs("glDrawArrays", 1, 2);
         noEnumArgs("glDeleteBuffers", 0);
+        noEnumArgs("glBindVertexArray", 0);
+        noEnumArgs("glGenVertexArrays", 0);
         
         noEnumArgs("glBindFramebufferEXT", 1);
         noEnumArgs("glBindRenderbufferEXT", 1);
         noEnumArgs("glRenderbufferStorageEXT", 2, 3);
+        noEnumArgs("glRenderbufferStorageMultisampleEXT", 1, 3, 4);
         noEnumArgs("glFramebufferRenderbufferEXT", 3);
         noEnumArgs("glFramebufferTexture2DEXT", 3, 4);
+        noEnumArgs("glBlitFramebufferEXT", 0, 1, 2, 3, 4, 5, 6, 7, 8);
         
         noEnumArgs("glCreateProgram", -1);
         noEnumArgs("glCreateShader", -1);
@@ -99,20 +110,23 @@ public final class GLTracer implements InvocationHandler {
         noEnumArgs("glUniformMatrix4", 0);
         noEnumArgs("glUniform1i", 0, 1);
         noEnumArgs("glUniform1f", 0);
+        noEnumArgs("glUniform2f", 0);
+        noEnumArgs("glUniform3f", 0);
+        noEnumArgs("glUniform4", 0);
         noEnumArgs("glUniform4f", 0);
         noEnumArgs("glGetAttribLocation", 0, -1);
         noEnumArgs("glDetachShader", 0, 1);
         noEnumArgs("glDeleteShader", 0);
         noEnumArgs("glDeleteProgram", 0);
+        noEnumArgs("glBindFragDataLocation", 0, 1);
     }
     
-    public GLTracer(GL gl, Object obj, IntMap<String> constMap) {
-        this.gl = gl;
+    public GLTracer(Object obj, IntMap<String> constMap) {
         this.obj = obj;
         this.constMap = constMap;
     }
     
-    public static IntMap<String> generateConstantMap(Class<?> ... classes) {
+    private static IntMap<String> generateConstantMap(Class<?> ... classes) {
         IntMap<String> constMap = new IntMap<String>();
         for (Class<?> clazz : classes) {
             for (Field field : clazz.getFields()) {
@@ -127,9 +141,39 @@ public final class GLTracer implements InvocationHandler {
                 }
             }
         }
+        // GL_ONE is more common than GL_TRUE (which is a boolean anyway..)
+        constMap.put(1, "GL_ONE");
         return constMap;
     }
+    
+    /**
+     * Creates a tracer implementation that wraps OpenGL ES 2.
+     * 
+     * @param glInterface OGL object to wrap
+     * @param glInterfaceClass The interface to implement
+     * @return A tracer that implements the given interface
+     */
+    public static Object createGlesTracer(Object glInterface, Class<?> glInterfaceClass) {
+        IntMap<String> constMap = generateConstantMap(GL.class, GLFbo.class, GLExt.class);
+        return Proxy.newProxyInstance(glInterface.getClass().getClassLoader(),
+                                      new Class<?>[] { glInterfaceClass }, 
+                                      new GLTracer(glInterface, constMap));
+    }
 
+    /**
+     * Creates a tracer implementation that wraps OpenGL 2+.
+     * 
+     * @param glInterface OGL object to wrap
+     * @param glInterfaceClasses The interface(s) to implement
+     * @return A tracer that implements the given interface
+     */
+    public static Object createDesktopGlTracer(Object glInterface, Class<?> ... glInterfaceClasses) {
+        IntMap<String> constMap = generateConstantMap(GL2.class, GL3.class, GL4.class, GLFbo.class, GLExt.class);
+        return Proxy.newProxyInstance(glInterface.getClass().getClassLoader(),
+                                      glInterfaceClasses, 
+                                      new GLTracer(glInterface, constMap));
+    }
+    
     private String translateInteger(String method, int value, int argIndex) {
         IntMap<Void> argSlotMap = nonEnumArgMap.get(method);
         if (argSlotMap != null && argSlotMap.containsKey(argIndex)) {

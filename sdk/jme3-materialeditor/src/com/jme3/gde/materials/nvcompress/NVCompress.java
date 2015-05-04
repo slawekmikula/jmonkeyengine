@@ -55,6 +55,7 @@ import jme3tools.converters.ImageToAwt;
 import jme3tools.converters.MipMapGenerator;
 import org.openide.util.NbPreferences;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class NVCompress extends javax.swing.JFrame {
     
     private File texToolsPath;
@@ -453,7 +454,7 @@ public class NVCompress extends javax.swing.JFrame {
             manager = JmeSystem.newAssetManager();
 
         manager.registerLocator(input.getParent().toString(),
-                                FileLocator.class.getName());
+                                FileLocator.class);
 
         String format = (String) cmbCompressType.getSelectedItem();
         if (format.equals("PNG-RGBE")){

@@ -45,6 +45,7 @@ import com.jme3.shader.Glsl150ShaderGenerator;
 import com.jme3.shader.Shader;
 import com.jme3.shader.ShaderGenerator;
 import com.jme3.shader.ShaderKey;
+import com.jme3.system.JmeSystem;
 import com.jme3.texture.Texture;
 import java.io.IOException;
 import java.io.InputStream;
@@ -80,10 +81,9 @@ public class DesktopAssetManager implements AssetManager {
     public DesktopAssetManager(){
         this(null);
     }
-
-    @Deprecated
-    public DesktopAssetManager(boolean loadDefaults){
-        this(Thread.currentThread().getContextClassLoader().getResource("com/jme3/asset/Desktop.cfg"));
+    
+    public DesktopAssetManager(boolean usePlatformConfig){
+        this(usePlatformConfig ? JmeSystem.getPlatformAssetConfigURL() : null);
     }
 
     public DesktopAssetManager(URL configFile){
@@ -93,20 +93,11 @@ public class DesktopAssetManager implements AssetManager {
         logger.fine("DesktopAssetManager created.");
     }
 
-    private void loadConfigFile(URL configFile){
-        InputStream stream = null;
-        try{
-            AssetConfig cfg = new AssetConfig(this);
-            stream = configFile.openStream();
-            cfg.loadText(stream);
-        }catch (IOException ex){
+    private void loadConfigFile(URL configFile) {
+        try {
+            AssetConfig.loadText(this, configFile);
+        } catch (IOException ex) {
             logger.log(Level.SEVERE, "Failed to load asset config", ex);
-        }finally{
-            if (stream != null)
-                try{
-                    stream.close();
-                }catch (IOException ex){
-                }
         }
     }
     
@@ -207,6 +198,7 @@ public class DesktopAssetManager implements AssetManager {
         return info;
     }
     
+    @Override
     public <T> T getFromCache(AssetKey<T> key) {
         AssetCache cache = handler.getCache(key.getCacheType());
         if (cache != null) {
@@ -221,6 +213,7 @@ public class DesktopAssetManager implements AssetManager {
         }
     }
     
+    @Override
     public <T> void addToCache(AssetKey<T> key, T asset) {
         AssetCache cache = handler.getCache(key.getCacheType());
         if (cache != null) {
@@ -231,6 +224,7 @@ public class DesktopAssetManager implements AssetManager {
         }
     }
     
+    @Override
     public <T> boolean deleteFromCache(AssetKey<T> key) {
         AssetCache cache = handler.getCache(key.getCacheType());
         if (cache != null) {
@@ -240,6 +234,7 @@ public class DesktopAssetManager implements AssetManager {
         }
     }
     
+    @Override
     public void clearCache(){
         handler.clearCache();
         if (logger.isLoggable(Level.FINER)){
@@ -248,13 +243,109 @@ public class DesktopAssetManager implements AssetManager {
     }
 
     /**
-     * <font color="red">Thread-safe.</font>
-     *
-     * @param <T>
-     * @param key
-     * @return the loaded asset
+     * Loads an asset that has already been located.
+     * @param <T> The asset type
+     * @param key The asset key
+     * @param info The AssetInfo from the locator
+     * @param proc AssetProcessor to use, or null to disable processing
+     * @param cache The cache to store the asset in, or null to disable caching
+     * @return The loaded asset
+     * 
+     * @throws AssetLoadException If failed to load asset due to exception or
+     * other error.
      */
-      public <T> T loadAsset(AssetKey<T> key){
+    protected <T> T loadLocatedAsset(AssetKey<T> key, AssetInfo info, AssetProcessor proc, AssetCache cache) {
+        AssetLoader loader = handler.aquireLoader(key);
+        Object obj;
+        try {
+            handler.establishParentKey(key);
+            obj = loader.load(info);
+        } catch (IOException ex) {
+            throw new AssetLoadException("An exception has occured while loading asset: " + key, ex);
+        } finally {
+            handler.releaseParentKey(key);
+        }
+        if (obj == null) {
+            throw new AssetLoadException("Error occured while loading asset \""
+                    + key + "\" using " + loader.getClass().getSimpleName());
+        } else {
+            if (logger.isLoggable(Level.FINER)) {
+                logger.log(Level.FINER, "Loaded {0} with {1}",
+                        new Object[]{key, loader.getClass().getSimpleName()});
+            }
+
+            if (proc != null) {
+                // do processing on asset before caching
+                obj = proc.postProcess(key, obj);
+            }
+
+            if (cache != null) {
+                // At this point, obj should be of type T
+                cache.addToCache(key, (T) obj);
+            }
+
+            for (AssetEventListener listener : eventListeners) {
+                listener.assetLoaded(key);
+            }
+
+            return (T) obj;
+        }
+    }
+    
+    /**
+     * Clones the asset using the given processor and registers the clone
+     * with the cache.
+     * 
+     * @param <T> The asset type
+     * @param key The asset key
+     * @param obj The asset to clone / register, must implement 
+     * {@link CloneableSmartAsset}.
+     * @param proc The processor which will generate the clone, cannot be null
+     * @param cache The cache to register the clone with, cannot be null.
+     * @return The cloned asset, cannot be the same as the given asset since
+     * it is a clone.
+     * 
+     * @throws IllegalStateException If asset does not implement 
+     * {@link CloneableSmartAsset}, if the cache is null, or if the 
+     * processor did not clone the asset.
+     */
+    protected <T> T registerAndCloneSmartAsset(AssetKey<T> key, T obj, AssetProcessor proc, AssetCache cache) {
+        // object obj is the original asset
+        // create an instance for user
+        if (proc == null) {
+            throw new IllegalStateException("Asset implements "
+                    + "CloneableSmartAsset but doesn't "
+                    + "have processor to handle cloning");
+        } else {
+            T clone = (T) proc.createClone(obj);
+            if (cache != null && clone != obj) {
+                cache.registerAssetClone(key, clone);
+            } else {
+                throw new IllegalStateException("Asset implements "
+                        + "CloneableSmartAsset but doesn't have cache or "
+                        + "was not cloned");
+            }
+            return clone;
+        }
+    }
+    
+    @Override
+    public <T> T loadAssetFromStream(AssetKey<T> key, InputStream inputStream) {
+        if (key == null) {
+            throw new IllegalArgumentException("key cannot be null");
+        }
+        
+        for (AssetEventListener listener : eventListeners){
+            listener.assetRequested(key);
+        }
+        
+        AssetProcessor proc = handler.getProcessor(key.getProcessorType());
+        StreamAssetInfo info = new StreamAssetInfo(this, key, inputStream);
+        return loadLocatedAsset(key, info, proc, null);
+    }
+    
+    @Override
+    public <T> T loadAsset(AssetKey<T> key){
         if (key == null)
             throw new IllegalArgumentException("key cannot be null");
         
@@ -268,7 +359,6 @@ public class DesktopAssetManager implements AssetManager {
         Object obj = cache != null ? cache.getFromCache(key) : null;
         if (obj == null){
             // Asset not in cache, load it from file system.
-            AssetLoader loader = handler.aquireLoader(key);
             AssetInfo info = handler.tryLocate(key);
             if (info == null){
                 if (handler.getParentKey() != null){
@@ -282,59 +372,16 @@ public class DesktopAssetManager implements AssetManager {
                 }
                 throw new AssetNotFoundException(key.toString());
             }
-
-            try {
-                handler.establishParentKey(key);
-                obj = loader.load(info);
-            } catch (IOException ex) {
-                throw new AssetLoadException("An exception has occured while loading asset: " + key, ex);
-            } finally {
-                handler.releaseParentKey(key);
-            }
-            if (obj == null){
-                throw new AssetLoadException("Error occured while loading asset \"" + key + "\" using " + loader.getClass().getSimpleName());
-            }else{
-                if (logger.isLoggable(Level.FINER)){
-                    logger.log(Level.FINER, "Loaded {0} with {1}",
-                            new Object[]{key, loader.getClass().getSimpleName()});
-                }
-                
-                if (proc != null){
-                    // do processing on asset before caching
-                    obj = proc.postProcess(key, obj);
-                }
-                
-                if (cache != null){
-                    // At this point, obj should be of type T
-                    cache.addToCache(key, (T) obj);
-                }
-                
-                for (AssetEventListener listener : eventListeners){
-                    listener.assetLoaded(key);
-                }
-            }
+            
+            obj = loadLocatedAsset(key, info, proc, cache);
         }
 
-        // object obj is the original asset
-        // create an instance for user
         T clone = (T) obj;
-        if (clone instanceof CloneableSmartAsset){
-            if (proc == null){
-                throw new IllegalStateException("Asset implements "
-                        + "CloneableSmartAsset but doesn't "
-                        + "have processor to handle cloning");
-            }else{
-                clone = (T) proc.createClone(obj);
-                if (cache != null && clone != obj){
-                    cache.registerAssetClone(key, clone);
-                } else{
-                    throw new IllegalStateException("Asset implements "
-                        + "CloneableSmartAsset but doesn't have cache or "
-                        + "was not cloned");
-                }
-            }
+        
+        if (obj instanceof CloneableSmartAsset) {
+            clone = registerAndCloneSmartAsset(key, clone, proc, cache);
         }
-       
+        
         return clone;
     }
 
@@ -353,9 +400,7 @@ public class DesktopAssetManager implements AssetManager {
     public Texture loadTexture(String name){
         TextureKey key = new TextureKey(name, true);
         key.setGenerateMips(true);
-        Texture tex = loadTexture(key);
-        logger.log(Level.FINE, "{0} - {1}", new Object[]{tex, tex.getMinFilter()});
-        return tex;
+        return loadTexture(key);
     }
 
     public AudioData loadAudio(AudioKey key){
@@ -404,16 +449,11 @@ public class DesktopAssetManager implements AssetManager {
                 }
                 shader = shaderGenerator.generateShader();
             } else {
-                String vertName = key.getVertName();
-                String fragName = key.getFragName();
-
-                String vertSource = (String) loadAsset(new AssetKey(vertName));
-                String fragSource = (String) loadAsset(new AssetKey(fragName));
-
                 shader = new Shader();
                 shader.initialize();
-                shader.addSource(Shader.ShaderType.Vertex, vertName, vertSource, key.getDefines().getCompiled(), key.getVertexShaderLanguage());
-                shader.addSource(Shader.ShaderType.Fragment, fragName, fragSource, key.getDefines().getCompiled(), key.getFragmentShaderLanguage());
+                for (Shader.ShaderType shaderType : key.getUsedShaderPrograms()) {
+                    shader.addSource(shaderType,key.getShaderProgramName(shaderType),(String) loadAsset(new AssetKey(key.getShaderProgramName(shaderType))),key.getDefines().getCompiled(),key.getShaderProgramLanguage(shaderType));
+                }
             }
 
             cache.addToCache(key, shader);

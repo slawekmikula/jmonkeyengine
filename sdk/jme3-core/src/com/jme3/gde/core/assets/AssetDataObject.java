@@ -72,7 +72,7 @@ import org.openide.util.lookup.ProxyLookup;
  *
  * @author normenhansen
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class AssetDataObject extends MultiDataObject {
 
     protected static final Logger logger = Logger.getLogger(AssetDataObject.class.getName());
@@ -139,7 +139,7 @@ public class AssetDataObject extends MultiDataObject {
     @Override
     protected Node createNodeDelegate() {
         AssetDataNode node = new AssetDataNode(this, Children.LEAF, new ProxyLookup(getCookieSet().getLookup(), contentLookup));
-        node.setIconBaseWithExtension("com/jme3/gde/core/icons/jme-logo.png");
+        node.setIconBaseWithExtension("com/jme3/gde/core/icons/model.gif");
         return node;
     }
 

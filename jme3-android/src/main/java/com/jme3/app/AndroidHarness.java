@@ -89,6 +89,13 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
     protected int eglStencilBits = 0;
 
     /**
+     * Set the desired frame rate.  If frameRate > 0, the application
+     * will be capped at the desired frame rate.
+     * (default = -1, no frame rate cap)
+     */
+    protected int frameRate = -1;
+
+    /**
      * Sets the type of Audio Renderer to be used.
      * <p>
      * Android MediaPlayer / SoundPool can be used on all
@@ -159,17 +166,8 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
      * splashPicID = 0, then no splash screen will be displayed.
      */
     protected int splashPicID = 0;
-    /**
-     * Set the screen orientation, default is SENSOR
-     * ActivityInfo.SCREEN_ORIENTATION_* constants package
-     * android.content.pm.ActivityInfo
-     *
-     * SCREEN_ORIENTATION_UNSPECIFIED SCREEN_ORIENTATION_LANDSCAPE
-     * SCREEN_ORIENTATION_PORTRAIT SCREEN_ORIENTATION_USER
-     * SCREEN_ORIENTATION_BEHIND SCREEN_ORIENTATION_SENSOR (default)
-     * SCREEN_ORIENTATION_NOSENSOR
-     */
-    protected int screenOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR;
+
+
     protected OGLESContext ctx;
     protected GLSurfaceView view = null;
     protected boolean isGLThreadPaused = true;
@@ -209,8 +207,6 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
             }
         }
 
-        setRequestedOrientation(screenOrientation);
-
         final DataObject data = (DataObject) getLastNonConfigurationInstance();
         if (data != null) {
             logger.log(Level.FINE, "Using Retained App");
@@ -238,6 +234,8 @@ public class AndroidHarness extends Activity implements TouchListener, DialogInt
 
             settings.setResolution(disp.getWidth(), disp.getHeight());
             settings.setAudioRenderer(audioRendererType);
+
+            settings.setFrameRate(frameRate);
 
             // Create application instance
             try {

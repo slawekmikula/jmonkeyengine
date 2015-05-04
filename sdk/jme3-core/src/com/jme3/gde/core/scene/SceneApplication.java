@@ -27,7 +27,6 @@ package com.jme3.gde.core.scene;
 import com.jme3.app.Application;
 import com.jme3.app.StatsView;
 import com.jme3.asset.AssetManager;
-import com.jme3.audio.AudioContext;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
@@ -70,8 +69,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.netbeans.api.progress.ProgressHandle;
-import org.netbeans.api.progress.ProgressHandleFactory;
 import org.netbeans.spi.project.LookupProvider;
 import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
@@ -88,7 +85,7 @@ import org.openide.util.lookup.Lookups;
  *
  * @author normenhansen
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class SceneApplication extends Application implements LookupProvider {
 
     private static final Logger logger = Logger.getLogger(SceneApplication.class.getName());
@@ -125,7 +122,6 @@ public class SceneApplication extends Application implements LookupProvider {
     private ScenePreviewProcessor previewProcessor;
     private ApplicationLogHandler logHandler = new ApplicationLogHandler();
     private WireProcessor wireProcessor;
-    private ProgressHandle progressHandle = ProgressHandleFactory.createHandle("Opening SceneViewer..");
     private String lastError = "";
     private boolean started = false;
     private boolean initFailed = false;
@@ -139,11 +135,12 @@ public class SceneApplication extends Application implements LookupProvider {
 
     public SceneApplication() {
         Logger.getLogger("com.jme3").addHandler(logHandler);
-        progressHandle.start(7);
         useCanvas = "true".equals(NbPreferences.forModule(Installer.class).get("use_lwjgl_canvas", "false"));
+        Logger.getLogger("com.jme3.renderer.opengl.TextureUtil").setLevel(Level.SEVERE);
         try {
             AppSettings newSetting = new AppSettings(true);
             newSetting.setFrameRate(30);
+            newSetting.setGammaCorrection(true);
             if (!useCanvas) {
                 newSetting.setCustomRenderer(AwtPanelsContext.class);
             }
@@ -158,7 +155,6 @@ public class SceneApplication extends Application implements LookupProvider {
             fakeApp = new FakeApplication(rootNode, guiNode, assetManager, cam);
             nodeSync = new NodeSyncAppState();
             stateManager.attach(nodeSync);
-            progressHandle.progress("initialize Base Application", 1);
             if (!useCanvas) {
                 start();
             }
@@ -167,7 +163,6 @@ public class SceneApplication extends Application implements LookupProvider {
         } catch (Error e) {
             showStartupErrorMessage(e);
         } finally {
-            getProgressHandle().finish();
         }
     }
 
@@ -176,7 +171,7 @@ public class SceneApplication extends Application implements LookupProvider {
             return ((JmeCanvasContext) getContext()).getCanvas();
         } else {
             if (panel == null) {
-                panel = ((AwtPanelsContext) getContext()).createPanel(PaintMode.Accelerated);
+                panel = ((AwtPanelsContext) getContext()).createPanel(PaintMode.Accelerated, true);
                 ((AwtPanelsContext) getContext()).setInputSource(panel);
                 attachPanel();
             }
@@ -226,35 +221,31 @@ public class SceneApplication extends Application implements LookupProvider {
                 {
                     overlayView = getRenderManager().createMainView("Overlay", cam);
                     overlayView.setClearFlags(false, true, false);
-                    guiViewPort.setClearFlags(false, false, false);
+                    guiViewPort.setClearFlags(false, false, false);                    
                 }
-                getProgressHandle().progress("Setup Camera Controller", 2);
+                ColorRGBA color = new ColorRGBA();
+                color.setAsSrgb(0.25f, 0.25f, 0.25f, 1.0f);
+                viewPort.setBackgroundColor(color);
                 //create camera controller
                 camController = new SceneCameraController(cam, inputManager);
                 //create preview view
-                getProgressHandle().progress("Setup Preview Scene", 3);
 
                 previewProcessor = new ScenePreviewProcessor();
                 previewProcessor.setupPreviewView();
 
-                getProgressHandle().progress("Prepare Camera", 4);
                 camLight = new PointLight();
                 camLight.setColor(ColorRGBA.White);
 
-                getProgressHandle().progress("Prepare Stats View", 5);
                 guiNode.setQueueBucket(Bucket.Gui);
                 guiNode.setCullHint(CullHint.Never);
                 loadFPSText();
                 loadStatsView();
-                getProgressHandle().progress("Attach Scene to Viewport", 6);
                 viewPort.attachScene(rootNode);
                 viewPort.attachScene(toolsNode);
                 guiViewPort.attachScene(guiNode);
                 cam.setLocation(new Vector3f(0, 0, 10));
 
-                getProgressHandle().progress("Create", 6);
                 wireProcessor = new WireProcessor(assetManager);
-                getProgressHandle().finish();
 
                 inputManager.addMapping("MouseAxisX", new MouseAxisTrigger(MouseInput.AXIS_X, false));
                 inputManager.addMapping("MouseAxisY", new MouseAxisTrigger(MouseInput.AXIS_Y, false));
@@ -273,7 +264,6 @@ public class SceneApplication extends Application implements LookupProvider {
                     fakeApp.stopFakeApp();
                 }
             } finally {
-                getProgressHandle().finish();
             }
         }
     }
@@ -285,7 +275,7 @@ public class SceneApplication extends Application implements LookupProvider {
         super.destroy();
     }
 
-    @Override
+    @Override    
     public void update() {
         if (!started) {
             try {
@@ -309,7 +299,7 @@ public class SceneApplication extends Application implements LookupProvider {
                     fpsText.setText("Frames per second: " + fps);
                     secondCounter = 0.0f;
                 }
-                getStateManager().update(tpf);
+                getStateManager().update(tpf);                
                 toolsNode.updateLogicalState(tpf);
                 if (fakap != null) {
                     fakap.updateFake(tpf);
@@ -530,6 +520,7 @@ public class SceneApplication extends Application implements LookupProvider {
         }
     }
 
+
     private void setWindowTitle(final String string) {
         SceneViewerTopComponent.findInstance().setDisplayName(string);
     }
@@ -627,7 +618,6 @@ public class SceneApplication extends Application implements LookupProvider {
 
     @Override
     public void handleError(String msg, Throwable t) {
-        progressHandle.finish();
         if (msg == null) {
             msg = t.getMessage();
         }
@@ -648,7 +638,7 @@ public class SceneApplication extends Application implements LookupProvider {
         NotifyUtil.show("Error starting OpenGL context!", "Click here to go to troubleshooting web page.", MessageType.EXCEPTION, lst, 0);
         logger.log(Level.INFO, exception.getMessage(), exception);
     }
-    private static ActionListener lst = new ActionListener() {
+    private static final ActionListener lst = new ActionListener() {
         public void actionPerformed(ActionEvent e) {
             try {
                 HtmlBrowser.URLDisplayer.getDefault().showURL(new URL("http://jmonkeyengine.org/wiki/doku.php/sdk:troubleshooting"));
@@ -675,10 +665,6 @@ public class SceneApplication extends Application implements LookupProvider {
 
     public Node getGuiNode() {
         return guiNode;
-    }
-
-    public ProgressHandle getProgressHandle() {
-        return progressHandle;
     }
 
     public AbstractCameraController getActiveCameraController() {

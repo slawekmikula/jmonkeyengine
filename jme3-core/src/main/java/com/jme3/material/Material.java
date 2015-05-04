@@ -150,7 +150,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     /**
      * This method sets the name of the material.
      * The name is not the same as the asset name.
-     * It can be null and there is no guarantee of its uniqness.
+     * It can be null and there is no guarantee of its uniqueness.
      * @param name the name of the material
      */
     public void setName(String name) {
@@ -556,7 +556,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
                         + "Linear using texture.getImage.setColorSpace().",
                         new Object[]{value.getName(), value.getImage().getColorSpace().name(), name});
             }
-            paramValues.put(name, new MatParamTexture(type, name, value, nextTexUnit++));
+            paramValues.put(name, new MatParamTexture(type, name, value, nextTexUnit++, null));
         } else {
             val.setTextureValue(value);
         }
@@ -887,10 +887,10 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
                 case Directional:
                     DirectionalLight dl = (DirectionalLight) l;
                     Vector3f dir = dl.getDirection();
-                    //FIXME : there is an inconstencie here due to backward 
+                    //FIXME : there is an inconstency here due to backward 
                     //compatibility of the lighting shader.
                     //The directional light direction is passed in the 
-                    //LightPosition uniform. The lightinf shader needs to be 
+                    //LightPosition uniform. The lighting shader needs to be 
                     //reworked though in order to fix this.
                     tmpLightPosition.set(dir.getX(), dir.getY(), dir.getZ(), -1);
                     lightPos.setValue(VarType.Vector4, tmpLightPosition);
@@ -935,9 +935,9 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             renderMeshFromGeometry(r, g);
         }
 
-        if (isFirstLight && lightList.size() > 0) {
-            // There are only ambient lights in the scene. Render
-            // a dummy "normal light" so we can see the ambient
+        if (isFirstLight) {
+            // Either there are no lights at all, or only ambient lights.
+            // Render a dummy "normal light" so we can see the ambient color.
             ambientColor.setValue(VarType.Vector4, getAmbientColor(lightList, false));
             lightColor.setValue(VarType.Vector4, ColorRGBA.BlackNoAlpha);
             lightPos.setValue(VarType.Vector4, nullDirLight);
@@ -1056,22 +1056,10 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
 
         Collection<MatParam> params = paramValues.values();
         for (MatParam param : params) {
-            if (param instanceof MatParamTexture) {
-                MatParamTexture texParam = (MatParamTexture) param;
-                r.setTexture(0, texParam.getTextureValue());
-            } else {
-                if (!techDef.isUsingShaders()) {
-                    continue;
-                }
-
-                technique.updateUniformParam(param.getName(), param.getVarType(), param.getValue());
-            }
+            param.apply(r, technique);
         }
 
-        Shader shader = technique.getShader();
-        if (techDef.isUsingShaders()) {
-            r.setShader(shader);
-        }
+        r.setShader(technique.getShader());
     }
 
     private void clearUniformsSetByCurrent(Shader shader) {
@@ -1164,11 +1152,6 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
 
         TechniqueDef techDef = technique.getDef();
 
-        if (techDef.getLightMode() == LightMode.MultiPass
-                && lights.size() == 0) {
-            return;
-        }
-
         if (rm.getForcedRenderState() != null) {
             r.applyRenderState(rm.getForcedRenderState());
         } else {
@@ -1182,11 +1165,11 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
 
         // update camera and world matrices
         // NOTE: setWorldTransform should have been called already
-        if (techDef.isUsingShaders()) {
-            // reset unchanged uniform flag
-            clearUniformsSetByCurrent(technique.getShader());
-            rm.updateUniformBindings(technique.getWorldBindUniforms());
-        }
+
+        // reset unchanged uniform flag
+        clearUniformsSetByCurrent(technique.getShader());
+        rm.updateUniformBindings(technique.getWorldBindUniforms());
+        
 
         // setup textures and uniforms
         for (int i = 0; i < paramValues.size(); i++) {
@@ -1199,20 +1182,24 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         // send lighting information, if needed
         switch (techDef.getLightMode()) {
             case Disable:
-                r.setLighting(null);
                 break;
             case SinglePass:
                 int nbRenderedLights = 0;
                 resetUniformsNotSetByCurrent(shader);
-                while(nbRenderedLights < lights.size()){
-                    nbRenderedLights = updateLightListUniforms(shader, geom, lights, rm.getSinglePassLightBatchSize(), rm, nbRenderedLights);
+                if (lights.size() == 0) {
+                    nbRenderedLights = updateLightListUniforms(shader, geom, lights, rm.getSinglePassLightBatchSize(), rm, 0);
                     r.setShader(shader);
                     renderMeshFromGeometry(r, geom);
+                } else {
+                    while (nbRenderedLights < lights.size()) {
+                        nbRenderedLights = updateLightListUniforms(shader, geom, lights, rm.getSinglePassLightBatchSize(), rm, nbRenderedLights);
+                        r.setShader(shader);
+                        renderMeshFromGeometry(r, geom);
+                    }
                 }
                 return;
             case FixedPipeline:
-                r.setLighting(lights);
-                break;
+                throw new IllegalArgumentException("OpenGL1 is not supported");
             case MultiPass:
                 // NOTE: Special case!
                 resetUniformsNotSetByCurrent(shader);
@@ -1222,12 +1209,10 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         }
 
         // upload and bind shader
-        if (techDef.isUsingShaders()) {
-            // any unset uniforms will be set to 0
-            resetUniformsNotSetByCurrent(shader);
-            r.setShader(shader);
-        }
-
+        // any unset uniforms will be set to 0
+        resetUniformsNotSetByCurrent(shader);
+        r.setShader(shader);
+        
         renderMeshFromGeometry(r, geom);
     }
 

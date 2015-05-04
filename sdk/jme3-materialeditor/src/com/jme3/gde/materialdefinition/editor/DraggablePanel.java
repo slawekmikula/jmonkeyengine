@@ -8,18 +8,18 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 /**
  *
- * @author m327836
+ * @author Nehon
  */
 public class DraggablePanel extends JPanel implements MouseListener, MouseMotionListener {
 
     protected int svdx, svdy, svdex, svdey;
     private boolean vertical = false;
     protected Diagram diagram;
-   
-    
+
     public DraggablePanel(boolean vertical) {
         this();
         this.vertical = vertical;
@@ -36,13 +36,15 @@ public class DraggablePanel extends JPanel implements MouseListener, MouseMotion
 
     @Override
     public void mousePressed(MouseEvent e) {
-        svdx = getLocation().x;
-        if (!vertical) {
-            svdex = e.getXOnScreen();
+        if (e.getButton() != MouseEvent.BUTTON2) {
+            svdx = getLocation().x;
+            if (!vertical) {
+                svdex = e.getXOnScreen();
+            }
+            svdy = getLocation().y;
+            svdey = e.getYOnScreen();
+            e.consume();
         }
-        svdy = getLocation().y;
-        svdey = e.getYOnScreen();
-        e.consume();
     }
 
     @Override
@@ -63,13 +65,15 @@ public class DraggablePanel extends JPanel implements MouseListener, MouseMotion
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        int xoffset = 0;
-        if (!vertical) {
-            xoffset = e.getLocationOnScreen().x - svdex;
+        if (!SwingUtilities.isMiddleMouseButton(e)) {
+            int xoffset = 0;
+            if (!vertical) {
+                xoffset = e.getLocationOnScreen().x - svdex;
+            }
+            int yoffset = e.getLocationOnScreen().y - svdey;
+            setLocation(Math.max(0, svdx + xoffset), Math.max(0, svdy + yoffset));
+            e.consume();
         }
-        int yoffset = e.getLocationOnScreen().y - svdey;
-        setLocation(Math.max(0, svdx + xoffset), Math.max(0,svdy + yoffset));
-        e.consume();
     }
 
     public Diagram getDiagram() {

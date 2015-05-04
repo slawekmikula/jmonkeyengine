@@ -2,7 +2,7 @@
 #import "Common/ShaderLib/Skinning.glsllib"
 #import "Common/ShaderLib/Lighting.glsllib"
 #ifdef VERTEX_LIGHTING
-    #import "Common/ShaderLib/PhongLighting.glsllib"    
+    #import "Common/ShaderLib/BlinnPhongLighting.glsllib"    
 #endif
 
 
@@ -126,7 +126,8 @@ void main(){
       DiffuseSum  =  m_Diffuse  * vec4(lightColor.rgb, 1.0);
       SpecularSum = (m_Specular * lightColor).rgb;
     #else
-      AmbientSum  = g_AmbientLightColor.rgb; // Default: ambient color is dark gray
+      // Defaults: Ambient and diffuse are white, specular is black.
+      AmbientSum  = g_AmbientLightColor.rgb;
       DiffuseSum  =  vec4(lightColor.rgb, 1.0);
       SpecularSum = vec3(0.0);
     #endif

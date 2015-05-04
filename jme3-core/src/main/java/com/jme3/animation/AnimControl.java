@@ -56,12 +56,12 @@ import java.util.Map.Entry;
  * 4) Animation event listeners
  * 5) Animated model cloning
  * 6) Animated model binary import/export
+ * 7) Hardware skinning
+ * 8) Attachments
+ * 9) Add/remove skins
  *
  * Planned:
- * 1) Hardware skinning
- * 2) Morph/Pose animation
- * 3) Attachments
- * 4) Add/remove skins
+ * 1) Morph/Pose animation
  *
  * @author Kirill Vainer
  */
@@ -372,9 +372,8 @@ public final class AnimControl extends AbstractControl implements Cloneable {
             // When backward compatibility won't be needed anymore this can deleted        
             Savable[] sav = in.readSavableArray("targets", null);
             if (sav != null) {
-                Mesh[] targets = new Mesh[sav.length];
-                System.arraycopy(sav, 0, targets, 0, sav.length);
-                skeletonControl = new SkeletonControl(targets, skeleton);
+                // NOTE: allow the targets to be gathered automatically
+                skeletonControl = new SkeletonControl(skeleton);
                 spatial.addControl(skeletonControl);
             }
         }

@@ -142,7 +142,6 @@ public class PhysicsSpace {
     private javax.vecmath.Vector3f rayVec2 = new javax.vecmath.Vector3f();
     private com.bulletphysics.linearmath.Transform sweepTrans1 = new com.bulletphysics.linearmath.Transform(new javax.vecmath.Matrix3f());
     private com.bulletphysics.linearmath.Transform sweepTrans2 = new com.bulletphysics.linearmath.Transform(new javax.vecmath.Matrix3f());
-    private AssetManager debugManager;
 
     /**
      * Get the current PhysicsSpace <b>running on this thread</b><br/>
@@ -362,7 +361,7 @@ public class PhysicsSpace {
             eventFactory.recycle(physicsCollisionEvent);
         }
     }
-    
+
     public static <V> Future<V> enqueueOnThisThread(Callable<V> callable) {
         AppTask<V> task = new AppTask<V>(callable);
         System.out.println("created apptask");
@@ -391,7 +390,12 @@ public class PhysicsSpace {
         if (obj instanceof PhysicsControl) {
             ((PhysicsControl) obj).setPhysicsSpace(this);
         } else if (obj instanceof Spatial) {
-            add(((Spatial) obj).getControl(PhysicsControl.class));
+            Spatial node = (Spatial) obj;
+            for (int i = 0; i < node.getNumControls(); i++) {
+                if (node.getControl(i) instanceof PhysicsControl) {
+                    add(((PhysicsControl) node.getControl(i)));
+                }
+            }
         } else if (obj instanceof PhysicsCollisionObject) {
             addCollisionObject((PhysicsCollisionObject) obj);
         } else if (obj instanceof PhysicsJoint) {
@@ -423,7 +427,12 @@ public class PhysicsSpace {
         if (obj instanceof PhysicsControl) {
             ((PhysicsControl) obj).setPhysicsSpace(null);
         } else if (obj instanceof Spatial) {
-            remove(((Spatial) obj).getControl(PhysicsControl.class));
+            Spatial node = (Spatial) obj;
+            for (int i = 0; i < node.getNumControls(); i++) {
+                if (node.getControl(i) instanceof PhysicsControl) {
+                    remove(((PhysicsControl) node.getControl(i)));
+                }
+            }
         } else if (obj instanceof PhysicsCollisionObject) {
             removeCollisionObject((PhysicsCollisionObject) obj);
         } else if (obj instanceof PhysicsJoint) {
@@ -610,7 +619,7 @@ public class PhysicsSpace {
         physicsJoints.remove(joint.getObjectId());
         dynamicsWorld.removeConstraint(joint.getObjectId());
     }
-    
+
     public Collection<PhysicsRigidBody> getRigidBodyList(){
         return new LinkedList<PhysicsRigidBody>(physicsBodies.values());
     }
@@ -618,19 +627,19 @@ public class PhysicsSpace {
     public Collection<PhysicsGhostObject> getGhostObjectList(){
         return new LinkedList<PhysicsGhostObject>(physicsGhostObjects.values());
     }
-    
+
     public Collection<PhysicsCharacter> getCharacterList(){
         return new LinkedList<PhysicsCharacter>(physicsCharacters.values());
     }
-    
+
     public Collection<PhysicsJoint> getJointList(){
         return new LinkedList<PhysicsJoint>(physicsJoints.values());
     }
-    
+
     public Collection<PhysicsVehicle> getVehicleList(){
         return new LinkedList<PhysicsVehicle>(physicsVehicles.values());
     }
-    
+
     /**
      * Sets the gravity of the PhysicsSpace, set before adding physics objects!
      * @param gravity
@@ -648,7 +657,7 @@ public class PhysicsSpace {
         dynamicsWorld.getGravity(tempVec);
         return Converter.convert(tempVec, gravity);
     }
-    
+
     /**
      * applies gravity value to all objects
      */
@@ -866,30 +875,22 @@ public class PhysicsSpace {
     public void setWorldMax(Vector3f worldMax) {
         this.worldMax.set(worldMax);
     }
-
+    
     /**
-     * Enable debug display for physics.
-     *
-     * @deprecated in favor of BulletDebugAppState, use
-     * <code>BulletAppState.setDebugEnabled(boolean)</code> to add automatically
-     * @param manager AssetManager to use to create debug materials
+     * Set the number of iterations used by the contact solver.
+     * 
+     * The default is 10. Use 4 for low quality, 20 for high quality.
+     * 
+     * @param numIterations The number of iterations used by the contact & constraint solver.
      */
-    @Deprecated
-    public void enableDebug(AssetManager manager) {
-        debugManager = manager;
+    public void setSolverNumIterations(int numIterations) {
+        dynamicsWorld.getSolverInfo().numIterations = numIterations;
     }
 
-    /**
-     * Disable debug display
-     */
-    public void disableDebug() {
-        debugManager = null;
+    public int getSolverNumIterations() {
+        return dynamicsWorld.getSolverInfo().numIterations;
     }
-
-    public AssetManager getDebugManager() {
-        return debugManager;
-    }
-
+    
     /**
      * interface with Broadphase types
      */
