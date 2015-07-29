@@ -34,6 +34,7 @@ package com.jme3.gde.core.sceneexplorer.nodes;
 import com.jme3.animation.SkeletonControl;
 import com.jme3.gde.core.icons.IconList;
 import com.jme3.gde.core.scene.SceneApplication;
+import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.debug.SkeletonDebugger;
@@ -126,14 +127,14 @@ public class JmeSkeletonControl extends AbstractSceneExplorerNode {
                             map.put(i, 0.5f); // FIXME
                         }
 
-                        final SkeletonDebugger skeletonDebug =
-                                new SkeletonDebugger("skeleton", skeletonControl.getSkeleton(), map);
-                        final Material mat = new Material(assetManager,
-                                "Common/MatDefs/Misc/Unshaded.j3md");
-                        mat.setColor("Color", ColorRGBA.Green);
-                        mat.getAdditionalRenderState().setDepthTest(false);
-                        skeletonDebug.setMaterial(mat);
-                        supportNode.attachChild(skeletonDebug);
+//                        final SkeletonDebugger skeletonDebug =
+//                                new SkeletonDebugger("skeleton", skeletonControl.getSkeleton(), map);
+//                        final Material mat = new Material(assetManager,
+//                                "Common/MatDefs/Misc/Unshaded.j3md");
+//                        mat.setColor("Color", ColorRGBA.Green);
+//                        mat.getAdditionalRenderState().setDepthTest(false);
+//                        skeletonDebug.setMaterial(mat);
+//                        supportNode.attachChild(skeletonDebug);
                         
                         
                         return null;
